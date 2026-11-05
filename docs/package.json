@@ -1,0 +1,16 @@
+{
+  "name": "tickler-docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Docs site for Tickler (VitePress). Separate from the server package.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}

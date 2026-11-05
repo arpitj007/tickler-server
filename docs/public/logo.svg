@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tickler">
+  <path d="M8 18a4 4 0 0 1 4-4h14l5 5h21a4 4 0 0 1 4 4v27a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4z" fill="#3b6fd6"/>
+  <rect x="8" y="24" width="48" height="30" rx="4" fill="#5b8be8"/>
+  <path d="M44 30l1.6 4.4L50 36l-4.4 1.6L44 42l-1.6-4.4L38 36l4.4-1.6z" fill="#ffd27a"/>
+</svg>

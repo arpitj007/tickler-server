@@ -1,0 +1,19 @@
+:root {
+  --vp-c-brand-1: #2f5fc4;
+  --vp-c-brand-2: #3b6fd6;
+  --vp-c-brand-3: #4f82e6;
+  --vp-c-brand-soft: rgba(59, 111, 214, 0.14);
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #2f5fc4 20%, #e0873a);
+}
+
+.dark {
+  --vp-c-brand-1: #8fb0f5;
+  --vp-c-brand-2: #6f97ee;
+  --vp-c-brand-3: #4f82e6;
+}
+
+.vp-doc img {
+  border-radius: 10px;
+  border: 1px solid var(--vp-c-divider);
+}
