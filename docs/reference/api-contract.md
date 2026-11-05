@@ -222,7 +222,7 @@ Placeholder details (additive):
   UTC date `YYYY-MM-DD`; `month` takes `YYYY-MM`; every other field takes the full ISO instant.
 - All-day entries use `__TODAY__±nD` so they land on midnight UTC.
 - Reference resolver: `resolveDemo()` in `tickler-server/scripts/seed-data.ts`.
-- Metric snapshots: per-label rows (e.g. one row per model) are not duplicated by a total row;
-  a provider's month to date is the sum of its rows for that metric. The server seed
+- Metric snapshots: a day's money total has `label: null` (or `"currency:XXX"`); rows with any
+  other label are breakdown lines (model, service) for `top_lines` and are not added to totals. The server seed
 script and both apps' demo modes load this same file. Apps copy it in at build time via
 `tickler-app/scripts/sync-shared.sh`.

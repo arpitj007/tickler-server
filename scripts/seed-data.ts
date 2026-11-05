@@ -347,6 +347,12 @@ export function generateDemo(): Json {
       rev: nextRev(),
     });
   };
+  // Convention (src/money/summary.ts): a day's money total has label null; labeled rows are
+  // breakdown lines for top_lines and are never added to totals.
+  const costDay = (provider: string, d: number, lines: Array<[string, number]>, latency: string) => {
+    snap(provider, "cost", "USD", lines.reduce((a, [, v]) => a + round2(v), 0), d, null, latency);
+    for (const [label, v] of lines) snap(provider, "cost", "USD", v, d, label, latency);
+  };
   for (let d = 60; d >= 0; d--) {
     const growth = 1 + (60 - d) / 120;
     const weekend = d % 7 < 2 ? 1.25 : 1;
@@ -355,17 +361,16 @@ export function generateDemo(): Json {
       snap("app_store", "units", "units", Math.round(int(4, 14) * growth), d, null, "~1 day");
       snap("google_play", "proceeds", "USD", (6 + rnd() * 12) * growth, d, null, "~1 day");
       snap("google_play", "units", "units", int(2, 8), d, null, "~1 day");
-      snap("aws", "cost", "USD", 2.4 + rnd() * 1.6, d, pick(["Amazon EC2", "Amazon S3", "Amazon RDS"]), "~1 day");
-      snap("github", "cost", "USD", 0.15 + rnd() * 0.5, d, "Actions", "~1 day");
+      costDay("aws", d, [["Amazon EC2", 1.6 + rnd()], ["Amazon S3", 0.3 + rnd() * 0.3], ["Amazon RDS", 0.5 + rnd() * 0.3]], "~1 day");
+      costDay("github", d, [["Actions", 0.15 + rnd() * 0.5]], "~1 day");
       snap("github", "usage", "minutes", int(40, 260), d, "Actions minutes", "~1 day");
     }
     snap("stripe", "revenue", "USD", (25 + rnd() * 40) * growth, d, null, "seconds");
-    snap("anthropic", "cost", "USD", 3 + rnd() * 5, d, "claude-sonnet-4-5", "~1 hour");
-    snap("anthropic", "cost", "USD", 1 + rnd() * 2.5, d, "claude-haiku-4-5", "~1 hour");
+    costDay("anthropic", d, [["claude-sonnet-4-5", 3 + rnd() * 5], ["claude-haiku-4-5", 1 + rnd() * 2.5]], "~1 hour");
     snap("anthropic", "usage", "tokens", int(800_000, 3_000_000), d, "claude-sonnet-4-5", "~1 hour");
     snap("cloudflare", "usage", "requests", int(40_000, 180_000), d, "Workers requests", "~1 hour");
-    snap("cloudflare", "cost", "USD", 0.05 + rnd() * 0.2, d, "Workers", "~1 hour");
-    snap("openai", "cost", "USD", 0.8 + rnd() * 2.2, d, "gpt-5-mini", "~1 hour");
+    costDay("cloudflare", d, [["Workers", 0.05 + rnd() * 0.2]], "~1 hour");
+    costDay("openai", d, [["gpt-5-mini", 0.8 + rnd() * 2.2]], "~1 hour");
   }
   // AWS provider forecast for the current month
   metric_snapshots.push({
