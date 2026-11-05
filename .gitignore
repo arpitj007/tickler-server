@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.sqlite
+*.sqlite-*
+data/
+coverage/
+docs/node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+.DS_Store
