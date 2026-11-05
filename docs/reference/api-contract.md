@@ -212,6 +212,17 @@ transcript_path, parent_session_id }`. Upserted on (`client`, `session_id`); wit
 `seed/demo-changes.json` in `tickler-server` is a full `/api/changes` response (cursor `"0"`
 base) with realistic fake data, dated relative to `"__NOW__"` placeholders resolved at load:
 every time field may be written as `"__NOW__+P2DT3H"` / `"__NOW__-PT30M"` (ISO 8601 duration
-offset from now, rounded to the minute) and the apps resolve it at load time. The server seed
+offset from now, rounded to the minute) and the apps resolve it at load time.
+
+Placeholder details (additive):
+- Bases: `__NOW__` (now, rounded down to the minute), `__TODAY__` (today 00:00 UTC),
+  `__MONTH_START__` (first day of the current UTC month), `__MONTH_END__` (last day of it).
+  `__MONTH__` is the same as `__MONTH_START__`. The offset is optional: `[+-]P[nD][T[nH][nM]]`.
+- Field format after resolving: date fields (`period_start`, `period_end`, `renews_on`) take the
+  UTC date `YYYY-MM-DD`; `month` takes `YYYY-MM`; every other field takes the full ISO instant.
+- All-day entries use `__TODAY__±nD` so they land on midnight UTC.
+- Reference resolver: `resolveDemo()` in `tickler-server/scripts/seed-data.ts`.
+- Metric snapshots: per-label rows (e.g. one row per model) are not duplicated by a total row;
+  a provider's month to date is the sum of its rows for that metric. The server seed
 script and both apps' demo modes load this same file. Apps copy it in at build time via
 `tickler-app/scripts/sync-shared.sh`.
