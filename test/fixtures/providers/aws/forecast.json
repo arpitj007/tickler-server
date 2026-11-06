@@ -1,0 +1,1 @@
+{ "Total": { "Amount": "20.5", "Unit": "USD" }, "ForecastResultsByTime": [{ "TimePeriod": { "Start": "2026-11-06", "End": "2026-12-01" }, "MeanValue": "20.5" }] }

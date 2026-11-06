@@ -1,0 +1,13 @@
+{
+  "GroupDefinitions": [{ "Type": "DIMENSION", "Key": "SERVICE" }],
+  "ResultsByTime": [
+    { "TimePeriod": { "Start": "2026-11-04", "End": "2026-11-05" }, "Total": {}, "Groups": [
+      { "Keys": ["Amazon Simple Storage Service"], "Metrics": { "UnblendedCost": { "Amount": "1.2345", "Unit": "USD" } } },
+      { "Keys": ["AWS Lambda"], "Metrics": { "UnblendedCost": { "Amount": "0.5", "Unit": "USD" } } }
+    ], "Estimated": true },
+    { "TimePeriod": { "Start": "2026-11-05", "End": "2026-11-06" }, "Total": {}, "Groups": [
+      { "Keys": ["AWS Lambda"], "Metrics": { "UnblendedCost": { "Amount": "0.25", "Unit": "USD" } } }
+    ], "Estimated": true }
+  ],
+  "DimensionValueAttributes": []
+}
