@@ -12,7 +12,7 @@ Product spec: `/Users/aj/dev/tickler-prompt.md` (the app repo is `tickler-app`, 
 - IDs are UUID v4 strings, lowercase.
 - Errors: HTTP 4xx/5xx with `{ "error": { "code": "not_found", "message": "..." } }`.
   Codes: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`,
-  `pairing_expired`, `validation_failed` (then `error.fields: { field: message }`), `internal`.
+  `pairing_expired`, `validation_failed` (HTTP 422, with `error.fields: { field: message }`), `internal`.
 - Money values are JSON numbers in major units (`12.34`) with an ISO 4217 `currency`.
 - Every mutable row carries `rev` (integer). The server keeps one global, monotonically
   increasing sequence; every insert, update or soft delete sets `rev = next_seq()`. Sync uses it.
