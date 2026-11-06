@@ -186,3 +186,23 @@ describe("webhooks", () => {
     expect((await t.req("/hooks/unknown", { method: "POST", body: "{}" })).status).toBe(404);
   });
 });
+
+describe("real adapters are wired", () => {
+  it("every registered provider renders a setup form and a status; webhooks reject unsigned calls", async () => {
+    const { providers, webhookHandlers } = await import("../../src/providers/index");
+    const t = makeApp({ providers, webhookHandlers });
+    const s = await setupAll(t);
+    const list = await (await t.req("/api/money/providers", { token: s.device })).json();
+    expect(list.providers.map((p: { provider: string }) => p.provider).sort()).toEqual(providers.map((p) => p.id).sort());
+    for (const p of providers) {
+      const r = await t.req(`/setup/money/${p.id}`, { cookie: s.cookie });
+      expect(r.status).toBe(200);
+      for (const f of p.fields) expect(await r.clone().text()).toContain(`name="${f.key}"`);
+    }
+    for (const h of webhookHandlers) {
+      const r = await t.req(`/hooks/${h.store}`, { method: "POST", body: "{}" });
+      expect([400, 401]).toContain(r.status);
+    }
+    expect((await t.req("/hooks/apple", { method: "POST", body: "{}" })).status).toBe(401);
+  });
+});

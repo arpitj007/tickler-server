@@ -1,8 +1,6 @@
 // Wires the money adapters (src/providers) and pure money functions (src/money) to storage:
 // provider status, sync, summary, series, and the daily job (budgets, renewals, pruning).
-import { evaluateBudgets } from "../money/budgets";
-import { dueRenewalReminders } from "../money/renewals";
-import { buildMoneySummary, monthToDateFromSummary, type MoneySummary, type StoredSnapshot } from "../money/summary";
+import { buildMoneySummary, dueRenewalReminders, evaluateBudgets, monthToDateFromSummary, type MoneySummary, type StoredSnapshot } from "../money/index";
 import type { Provider, ProviderId, SyncContext } from "../providers/types";
 import { logActivity } from "./activity";
 import { BUMP, REV, SYSTEM, type Actor, type Ctx } from "./context";
