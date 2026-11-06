@@ -1,0 +1,3 @@
+# A long random value. It encrypts provider keys and you type it once on /setup to claim the server.
+# Generate one with: openssl rand -base64 32
+TICKLER_SECRET=

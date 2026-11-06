@@ -1,0 +1,29 @@
+// Cloudflare Workers config. The "Deploy to Cloudflare" button reads this file, creates the D1
+// database in your account and asks for TICKLER_SECRET (from .dev.vars.example).
+// Docs checked 2026-11-06: https://developers.cloudflare.com/workers/platform/deploy-buttons/
+// and https://developers.cloudflare.com/workers/wrangler/configuration/ (automatic provisioning:
+// database_id is filled in on the first deploy).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tickler-server",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tickler",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Every 15 minutes: provider syncs (each provider has its own minimum interval).
+  // 06:00 UTC: forecasts, budget alerts, renewal reminders, pruning.
+  "triggers": { "crons": ["*/15 * * * *", "0 6 * * *"] },
+  "vars": {
+    "TICKLER_SERVER_NAME": "Tickler",
+    "TICKLER_CURRENCY": "USD"
+  },
+  // Migrations are bundled as text; the Worker applies them itself on first use.
+  "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }]
+}

@@ -15,9 +15,10 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
-    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy",
+    "deploy": "wrangler deploy",
     "test:workers": "vitest run --config vitest.workers.config.ts",
-    "reset-admin": "tsx src/node.ts reset-admin"
+    "reset-admin": "tsx src/node.ts reset-admin",
+    "db:migrate": "wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.6",
@@ -41,5 +42,21 @@
     "typescript": "^7.0.2",
     "vitest": "^4.1.12",
     "wrangler": "^4.158.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "DB": {
+        "description": "SQLite database for your entries, projects and money data."
+      },
+      "TICKLER_SECRET": {
+        "description": "A long random secret (for example from `openssl rand -base64 32`). It encrypts provider keys, and you enter it once on **/setup** to claim the server. Keep a copy."
+      },
+      "TICKLER_SERVER_NAME": {
+        "description": "A name for this server, shown in the app (for example **Personal** or **Work**)."
+      },
+      "TICKLER_CURRENCY": {
+        "description": "Your currency for money totals, an ISO code like `USD` or `EUR`."
+      }
+    }
   }
 }
