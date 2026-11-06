@@ -595,6 +595,7 @@ setup.get("/money/:provider", async (c) => {
         </p>
       ) : null}
       {status.last_error ? <p class="flash error">Last sync error: {status.last_error}</p> : null}
+      {status.last_message ? <p class="flash">Message from {p.displayName}: {status.last_message}</p> : null}
       <form method="post" action={`/setup/money/${p.id}`}>
         {p.fields.map((f) => {
           const has = cfg[f.key] !== undefined && cfg[f.key] !== "";

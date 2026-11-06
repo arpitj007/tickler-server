@@ -178,6 +178,7 @@ export interface ProviderConfigRow {
   enabled: number;
   last_sync_at: string | null;
   last_error: string | null;
+  last_message: string | null;
   updated_at: string;
 }
 

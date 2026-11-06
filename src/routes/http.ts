@@ -10,6 +10,7 @@ export type Env = {
     ctx: Ctx;
     principal: Principal;
     baseUrl: string;
+    ip: string;
   };
 };
 export type C = Context<Env>;
@@ -44,18 +45,9 @@ export function errorResponse(e: ApiError) {
   return { error: { code: e.code, message: e.message, ...e.extra } };
 }
 
-/**
- * Client IP for rate limits. On Node, src/node.ts always overwrites x-tickler-ip with the socket
- * address (behind a tunnel that's the tunnel, which only makes limits stricter). On Workers,
- * cf-connecting-ip is set by Cloudflare.
- */
+/** Client IP for rate limits, set once per request by the app (runtime specific, see AppDeps.getIp). */
 export function clientIp(c: C): string {
-  return (
-    c.req.header("x-tickler-ip") ??
-    c.req.header("cf-connecting-ip") ??
-    c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown"
-  );
+  return c.get("ip") ?? "unknown";
 }
 
 export function intParam(v: string | undefined, def: number, max: number): number {

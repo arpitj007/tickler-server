@@ -386,7 +386,7 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
             stores: (s.stores ?? []).filter((p) => p.store === a.provider),
           });
         }
-        return ok(summary as Record<string, unknown>);
+        return ok(summary as unknown as Record<string, unknown>);
       } catch (e) {
         return fail(e);
       }

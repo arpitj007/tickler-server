@@ -9,9 +9,12 @@ import { clientIp, type Env } from "./http";
 
 export const hooks = new Hono<Env>();
 
+/** Spec names (section 9) map to provider ids. */
+export const HOOK_ALIASES: Record<string, string> = { apple: "app_store", google: "google_play", amazon: "amazon_appstore" };
+
 hooks.post("/:store", async (c) => {
   const ctx = c.get("ctx");
-  const store = c.req.param("store");
+  const store = HOOK_ALIASES[c.req.param("store")] ?? c.req.param("store");
   const handler = ctx.webhookHandlers.find((h) => h.store === store);
   if (!handler) return c.json({ error: { code: "not_found", message: "No webhook handler for this store" } }, 404);
   await rateLimit(ctx, `hooks:${store}:${clientIp(c)}`, 300, 60);
@@ -29,7 +32,10 @@ hooks.post("/:store", async (c) => {
   }
   const added = await insertSalesEvents(ctx, result.events);
   if (added) await logActivity(ctx, { ...SYSTEM, name: store }, `POST /hooks/${store}`, `${added} sales event(s): ${result.events.map((e) => e.type).join(", ")}`);
-  if (result.notice) await logActivity(ctx, { ...SYSTEM, name: store }, `POST /hooks/${store}`, result.notice);
-  if (result.response) return c.body(result.response.body ?? null, result.response.status as 200);
+  if (result.notice) {
+    await ctx.storage.run("UPDATE provider_configs SET last_message = ? WHERE provider = ?", [result.notice.slice(0, 2000), store]);
+    await logActivity(ctx, { ...SYSTEM, name: store }, `POST /hooks/${store}`, result.notice);
+  }
+  if (result.response) return new Response(result.response.body ?? null, { status: result.response.status });
   return c.json({ ok: true, received: result.events.length, added });
 });

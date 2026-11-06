@@ -26,6 +26,8 @@ export interface AppDeps {
   webhookHandlers?: WebhookHandler[];
   fetch?: typeof fetch;
   now?: () => Date;
+  /** Client IP for rate limits. Workers: cf-connecting-ip. Node: the socket address. */
+  getIp?: (req: Request, env: unknown) => string | undefined;
 }
 
 export function makeCtx(deps: AppDeps, config: Config = configFromEnv(deps.env)): Ctx {
@@ -64,6 +66,7 @@ export function createApp(deps: AppDeps) {
   app.use("*", async (c, next) => {
     await ensureMigrated();
     c.set("ctx", ctx);
+    c.set("ip", deps.getIp?.(c.req.raw, c.env) ?? c.req.header("cf-connecting-ip") ?? "unknown");
     const base = baseUrlFor(ctx.config, c.req.raw);
     c.set("baseUrl", base);
     // CORS is locked: no Access-Control headers are ever sent, and state-changing requests

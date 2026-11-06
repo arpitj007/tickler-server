@@ -90,7 +90,8 @@ POST /api/pair
 { "provider": "app_store|google_play|amazon_appstore|stripe|cloudflare|google_cloud|aws|anthropic|openai|github|manual",
   "display_name", "kind": "revenue|cost", "configured": true, "enabled": true,
   "freshness": "hourly", "needs_public_url": false, "public_url_ok": true,
-  "last_sync_at", "last_error": null, "guide": "providers/stripe" }
+  "last_sync_at", "last_error": null, "guide": "providers/stripe",
+  "last_message": null /* additive: e.g. the Amazon SNS confirmation note from a webhook */ }
 
 // MetricSnapshot
 { "id", "provider", "account", "metric": "revenue|proceeds|units|cost|usage|forecast",
@@ -184,7 +185,8 @@ Money summary:
                   "budget": Budget | null, "budget_used": 0.42 | null, "as_of", "freshness",
                   "top_lines": [{ "label", "value" }] }],
   "stores": [{ "store", "proceeds", "units", "new_subscriptions", "renewals", "refunds", "trials",
-               "currency", "as_of" }] }
+               "currency", "as_of" }],
+  "notes": ["…"] /* additive: caveats, e.g. amounts left out of totals because of another currency */ }
 ```
 
 Currency: v1 reports everything in the user's base currency (`TICKLER_CURRENCY`, default USD);
@@ -201,6 +203,14 @@ Tool results return JSON text plus `structuredContent`. `create_entry` returns
 `{ client, session_id, title, open_url, resume_command, machine, cwd, repo, branch,
 transcript_path, parent_session_id }`. Upserted on (`client`, `session_id`); without
 `session_id` a new origin row per call is avoided by keying on (`client`, `title`, token id, day).
+When a call has no `origin`, the entry gets `origin_flagged: true` and an origin whose `client` is
+guessed from the OAuth client name or User-Agent (`claude_app`, `chatgpt`, ...), else `other`.
+
+Store webhooks: `POST /hooks/<store>` for `app_store`, `google_play`, `amazon_appstore`, `stripe`;
+`/hooks/apple`, `/hooks/google`, `/hooks/amazon` are aliases.
+
+Review/demo servers only: when `TICKLER_DEMO_PAIRING_CODE` is set, `POST /api/pair` always accepts
+that code (never expires, never used up). Never set it on a real server.
 
 ## Deep links (apps)
 

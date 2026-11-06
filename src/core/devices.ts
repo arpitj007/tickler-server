@@ -18,6 +18,7 @@ export async function createPairingCode(ctx: Ctx, actor: Actor) {
 /** Exchange a one-time pairing code for a device token. */
 export async function pairDevice(ctx: Ctx, rawCode: string, name: string, platform: string) {
   const code = rawCode.trim().toUpperCase().replace(/[\s-]/g, "");
+  if (ctx.config.demoPairingCode && code === ctx.config.demoPairingCode) return issueDeviceToken(ctx, name, platform);
   const row = await ctx.storage.first<{ code: string; expires_at: string; used_at: string | null }>(
     "SELECT * FROM pairing_codes WHERE code = ?",
     [code],
@@ -30,6 +31,11 @@ export async function pairDevice(ctx: Ctx, rawCode: string, name: string, platfo
   // Single use, even under concurrent requests.
   const claim = await ctx.storage.run("UPDATE pairing_codes SET used_at = ? WHERE code = ? AND used_at IS NULL", [now.toISOString(), code]);
   if (claim.changes !== 1) throw new ApiError(400, "pairing_expired", "This pairing code was already used.");
+  return issueDeviceToken(ctx, name, platform);
+}
+
+async function issueDeviceToken(ctx: Ctx, name: string, platform: string) {
+  const now = ctx.now();
   const token = randomToken("tkd_");
   const id = uuid();
   const plat = ["ios", "android"].includes(platform) ? platform : "other";

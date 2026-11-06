@@ -8,6 +8,8 @@ export interface Config {
   /** TICKLER_PUBLIC_URL without trailing slash, or null to derive from the request. */
   publicUrl: string | null;
   currency: string;
+  /** TICKLER_DEMO_PAIRING_CODE: review/demo servers only. Always accepted, never used up. */
+  demoPairingCode: string | null;
 }
 
 export interface Ctx {
@@ -38,5 +40,6 @@ export function configFromEnv(env: Record<string, unknown>): Config {
     serverName: str("TICKLER_SERVER_NAME") ?? "Tickler",
     publicUrl: str("TICKLER_PUBLIC_URL")?.replace(/\/+$/, "") ?? null,
     currency: (str("TICKLER_CURRENCY") ?? "USD").toUpperCase(),
+    demoPairingCode: str("TICKLER_DEMO_PAIRING_CODE")?.toUpperCase().replace(/[\s-]/g, "") ?? null,
   };
 }

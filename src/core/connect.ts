@@ -33,7 +33,7 @@ export function connectClients(baseUrl: string, token = "<TOKEN>"): ConnectClien
       id: "claude_app",
       name: "Claude apps (custom connector)",
       auth: "oauth",
-      snippet: `Settings > Connectors > Add custom connector\nName: Tickler\nURL: ${mcp}`,
+      snippet: `Customize > Connectors > Add custom connector\nName: Tickler\nURL: ${mcp}`,
       docs: `${DOCS}/guides/connect/claude-apps.md`,
       note: "Sign in with your Tickler admin passphrase or passkey when asked.",
     },

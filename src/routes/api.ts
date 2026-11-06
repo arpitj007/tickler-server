@@ -102,11 +102,9 @@ const idempotency: MiddlewareHandler<Env> = async (c, next) => {
   );
 };
 
-api.use("*", async (c, next) => {
-  const path = c.req.path.replace(/\/+$/, "");
-  if (path === "/api/health" || path === "/api/pair") return next();
-  return requireAuth(c, async () => idempotency(c, next));
-});
+const isPublic = (c: C) => ["/api/health", "/api/pair"].includes(c.req.path.replace(/\/+$/, ""));
+api.use("*", async (c, next) => (isPublic(c) ? next() : requireAuth(c, next)));
+api.use("*", async (c, next) => (isPublic(c) ? next() : idempotency(c, next)));
 
 const meta = (c: C, action: string) => ({ actor: c.get("principal").actor, action, source: "manual" as const });
 

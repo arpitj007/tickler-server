@@ -5,7 +5,7 @@
 import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { generateDemo, resolveDemo } from "./seed-data.ts";
+import { generateDemo, resolveDemo } from "./seed-data";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const seedFile = join(root, "seed", "demo-changes.json");
@@ -23,10 +23,10 @@ async function main() {
     const dataDir = process.env.TICKLER_DATA_DIR ?? join(root, "data");
     const dbPath = dbIdx >= 0 ? rest[dbIdx + 1]! : join(dataDir, "tickler.sqlite");
     mkdirSync(dirname(dbPath), { recursive: true });
-    const { openSqliteStorage } = await import("../src/storage/sqlite.ts");
-    const { migrate } = await import("../src/storage/migrate.ts");
-    const { readMigrationsFromDir } = await import("../src/storage/migrationsFs.ts");
-    const { loadDemo } = await import("../src/core/demo.ts");
+    const { openSqliteStorage } = await import("../src/storage/sqlite");
+    const { migrate } = await import("../src/storage/migrate");
+    const { readMigrationsFromDir } = await import("../src/storage/migrationsFs");
+    const { loadDemo } = await import("../src/core/demo");
     const storage = openSqliteStorage(dbPath);
     await migrate(storage, readMigrationsFromDir(join(root, "migrations")));
     const doc = resolveDemo(JSON.parse(readFileSync(seedFile, "utf8")));

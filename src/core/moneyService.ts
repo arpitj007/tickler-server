@@ -59,6 +59,7 @@ export async function providerStatus(ctx: Ctx, id: string, baseUrl: string | nul
     public_url_ok: p?.needsPublicUrl ? isPublicUrlOk(ctx, baseUrl) : true,
     last_sync_at: r?.last_sync_at ?? null,
     last_error: r?.last_error ?? null,
+    last_message: r?.last_message ?? null,
     guide: p?.guide ?? `providers/${id.replace(/_/g, "-")}`,
   };
 }
