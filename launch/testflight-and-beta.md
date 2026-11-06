@@ -13,6 +13,8 @@ Every beta build's "What to Test" text links to https://github.com/arpitj007/tic
 
 ## iPhone: TestFlight
 
+Status 2026-11-06: build 1.0.0 (2611060706) is live for internal testers, iPhone only. Until gettickler.com is live, the feedback link points to the GitHub repo.
+
 Facts checked 2026-11-06 (https://developer.apple.com/testflight/, https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview):
 
 - Up to 100 internal testers (App Store Connect users) and up to 10,000 external testers.

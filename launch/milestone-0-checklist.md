@@ -6,8 +6,8 @@ Status as of 2026-11-06. "Done" means checked by search; "Owner" means the owner
 
 | Check | Result | Status |
 | --- | --- | --- |
-| App Store: exact "Tickler" app | No exact match found in US, GB, DE and IN store searches on 2026-11-06 | Done (search) |
-| App Store Connect name reservation | Create the app record named "Tickler" to reserve it | **Owner** |
+| App Store: exact "Tickler" app | No exact match found in US, GB, DE and IN store searches on 2026-11-06, but App Store Connect still refused "Tickler" (names are reserved worldwide, including by unreleased apps) | Done (search) |
+| App Store Connect name reservation | Done 2026-11-06: "Tickler" was taken, so the record is **Tickler: Agent Follow-ups** (app id 6831500007, bundle id `com.gettickler.tickler`). The name under the icon stays "Tickler". | Done |
 | Google Play: exact "Tickler" app | Search Play for "Tickler" and check for conflicts; reserve the package name `com.<you>.tickler` by creating the app in the Play Console | **Owner** |
 | USPTO, classes 9 and 42 | Aggregators show no live TICKLER mark in class 9 or 42 | Done (aggregators), confirm in USPTO search |
 | USPTO, related marks | TICKLER, serial 77205084, class 38: dead. POWER TICKLER: cancelled 2001. CPA TICKLER: abandoned. | Done |
@@ -51,7 +51,8 @@ The docs, Docker image name (`ghcr.io/arpitj007/tickler-server`), Deploy button 
 Accounts and IDs:
 
 - [ ] Apple Developer Program membership (USD 99 a year). Note the **Team ID**.
-- [ ] Create the App Store Connect app record "Tickler", bundle id `com.<you>.tickler`, reserving the name. Add the subtitle from `app-store.md`.
+- [x] Create the App Store Connect app record (done 2026-11-06 as "Tickler: Agent Follow-ups", app id 6831500007, bundle id `com.gettickler.tickler`). Add the subtitle from `app-store.md`.
+- [x] TestFlight build 1.0.0 (2611060706) live for internal testers, iPhone only.
 - [ ] Google Play Console developer account (USD 25 once). Personal accounts must run a 14 day closed test with 12 or more testers before production (see `testflight-and-beta.md`). Consider an organization account (needs a D-U-N-S number) to skip that.
 - [ ] Create the Play app and reserve the package name.
 - [ ] Paid apps agreement (Apple) and payments profile (Google), with tax and banking, before in-app purchases work.

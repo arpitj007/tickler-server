@@ -8,12 +8,20 @@ Limits (checked 2026-11-06, https://developer.apple.com/help/app-store-connect/r
 
 | Field | Text | Length |
 | --- | --- | --- |
-| Name | `Tickler` | 7 / 30 |
+| Name | `Tickler: Agent Follow-ups` | 25 / 30 |
 | Subtitle | `Calendar for your AI agents` | 27 / 30 |
+
+Plain "Tickler" was taken on the App Store, so the record (app id 6831500007, bundle id
+`com.gettickler.tickler`, team N3K9N3486B) was created as **Tickler: Agent Follow-ups** on
+2026-11-06. Only the store listing uses the long name. The name under the icon, the bundle id and
+all branding stay "Tickler"; refer to the app as "Tickler" in descriptions and screenshots.
+
+The name already contains "agent", so the subtitle's "agents" adds no search reach. If you want
+more reach, an alternative subtitle without the repeat is `AI calendar for coding work` (27 / 30).
 
 No AI brand names in name, subtitle or icon (Guidelines 2.3.7, 4.1(c), 5.2.1).
 
-Fallback names if milestone 0 fails, in order: Docket Agent, Laterbook, Promptly Later.
+Earlier fallbacks (Docket Agent, Laterbook, Promptly Later) are no longer needed.
 
 ## Category and pricing
 
@@ -119,10 +127,11 @@ Claude and Claude Code are trademarks of Anthropic, PBC. ChatGPT and Codex are t
 ## Keywords (99 / 100 bytes)
 
 ```
-ai agent,mcp,calendar,self-hosted,reminders,deadlines,planner,revenue,costs,budget,developer,coding
+ai,mcp,calendar,self-hosted,reminders,deadlines,planner,revenue,costs,budget,developer,coding,tasks
 ```
 
-No brand names, no competitor names, no words already in the name or subtitle repeated without reason ("calendar" is kept because it ranks; drop it if Apple flags duplication).
+"Agent" and "follow-ups" are in the store name, which Apple already indexes, so they aren't repeated
+here. No brand names, no competitor names, no words already in the name or subtitle repeated without reason ("calendar" is kept because it ranks; drop it if Apple flags duplication).
 
 ## What's New in 1.0 (570 / 4000)
 
