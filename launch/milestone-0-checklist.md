@@ -60,6 +60,7 @@ Accounts and IDs:
 Products:
 
 - [ ] Decide final pricing. Recommendation: USD 2.99 a month, USD 19.99 a year with 7 days free, USD 49.99 lifetime.
+- [x] App Store side done 2026-11-06: subscription group "Tickler Pro" with `tickler.pro.monthly` ($2.99) and `tickler.pro.yearly` ($19.99, 7-day free trial), plus non-consumable `tickler.pro.lifetime` ($49.99), Family Sharing on, all Ready to Submit. Still to do on Play.
 - [ ] Create the three products in App Store Connect (subscription group "Tickler Pro" plus a non-consumable) and in the Play Console (subscriptions with base plans plus a one-time product). Use the same product ids on both if possible.
 - [ ] Turn on Family Sharing for the iOS products.
 
