@@ -1,0 +1,8 @@
+{
+  "usageItems": [
+    { "date": "2026-11-03T00:00:00Z", "product": "actions", "sku": "actions_linux", "quantity": 120, "unitType": "Minutes", "pricePerUnit": 0.006, "grossAmount": 0.72, "discountAmount": 0.72, "netAmount": 0, "repositoryName": "example/app" },
+    { "date": "2026-11-04T00:00:00Z", "product": "actions", "sku": "actions_macos", "quantity": 50, "unitType": "Minutes", "pricePerUnit": 0.062, "grossAmount": 3.1, "discountAmount": 0, "netAmount": 3.1, "repositoryName": "example/app" },
+    { "date": "2026-11-04T00:00:00Z", "product": "copilot", "sku": "copilot_premium_request", "quantity": 10, "unitType": "Requests", "pricePerUnit": 0.04, "grossAmount": 0.4, "discountAmount": 0, "netAmount": 0.4, "repositoryName": "" },
+    { "date": "2026-10-20T00:00:00Z", "product": "actions", "sku": "actions_linux", "quantity": 10, "unitType": "Minutes", "pricePerUnit": 0.006, "grossAmount": 0.06, "discountAmount": 0, "netAmount": 0.06, "repositoryName": "example/app" }
+  ]
+}
