@@ -1,0 +1,4 @@
+{ "data": { "viewer": { "accounts": [ {
+  "d1AnalyticsAdaptiveGroups": [ { "sum": { "rowsRead": 1000000, "rowsWritten": 60000000 }, "dimensions": { "date": "2026-11-02" } } ],
+  "d1StorageAdaptiveGroups": [ { "max": { "databaseSizeBytes": 1000000000 }, "dimensions": { "date": "2026-11-02", "databaseId": "db-1" } } ]
+} ] } }, "errors": null }
