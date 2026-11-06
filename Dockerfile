@@ -1,6 +1,6 @@
 # Tickler server for Docker (home server, NAS, VPS).
 #   docker run -p 8787:8787 -v tickler:/data ghcr.io/arpitj007/tickler-server
-FROM node:22-slim AS build
+FROM node:25-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
@@ -8,12 +8,12 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build:node
 
-FROM node:22-slim AS deps
+FROM node:25-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
 
-FROM node:22-slim
+FROM node:25-slim
 LABEL org.opencontainers.image.source="https://github.com/arpitj007/tickler-server" \
       org.opencontainers.image.description="Tickler: the calendar your AI agents write to. Self-hosted MCP server." \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
