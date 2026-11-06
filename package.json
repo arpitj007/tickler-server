@@ -18,7 +18,8 @@
     "deploy": "wrangler deploy",
     "test:workers": "vitest run --config vitest.workers.config.ts",
     "reset-admin": "NODE_OPTIONS=--experimental-sqlite tsx src/node.ts reset-admin",
-    "db:migrate": "wrangler d1 migrations apply DB --remote"
+    "db:migrate": "wrangler d1 migrations apply DB --remote",
+    "provider": "tsx scripts/provider.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.6",

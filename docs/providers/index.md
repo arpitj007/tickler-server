@@ -41,3 +41,24 @@ with the provider's own delay. Every number in the app shows when it was fetched
 Store webhooks are sent to `https://<your-server>/hooks/<store>`. On Cloudflare Workers the URL
 is public already. On Docker, set up a tunnel first (see the Tunnel guide); the provider card
 says "Needs a public URL" until one works.
+
+## Connecting from your computer
+
+Keys that come as files (an App Store `.p8`, a Google service account JSON) are easier to add
+from a computer than to paste on a phone. From a `tickler-server` checkout:
+
+```sh
+cat > creds.json <<'JSON'
+{ "issuer_id": "…", "key_id": "…", "private_key": "@AuthKey_ABC123.p8", "vendor_number": "…" }
+JSON
+TICKLER_SECRET=<your server secret> npm run provider -- set app_store creds.json
+rm creds.json
+```
+
+- The field names are the ones the app shows for that source. A value starting with `@` is read
+  from that file.
+- The command tests the key against the provider first and stops if the test fails.
+- It encrypts the key with your `TICKLER_SECRET`, the same way the server does, and writes it to
+  your Cloudflare D1 database (`--d1 <name>` if yours isn't called `tickler`) or, with
+  `--db /path/to/tickler.sqlite`, to a Docker server's file.
+- `npm run provider -- test <source> creds.json` only runs the test.
