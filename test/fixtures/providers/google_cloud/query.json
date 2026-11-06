@@ -1,0 +1,12 @@
+{
+  "kind": "bigquery#queryResponse",
+  "schema": { "fields": [ { "name": "day", "type": "STRING" }, { "name": "service", "type": "STRING" }, { "name": "currency", "type": "STRING" }, { "name": "net", "type": "FLOAT" } ] },
+  "jobReference": { "projectId": "example-project", "jobId": "job_123", "location": "US" },
+  "totalRows": "3",
+  "rows": [
+    { "f": [ { "v": "2026-11-04" }, { "v": "Compute Engine" }, { "v": "USD" }, { "v": "4.5" } ] },
+    { "f": [ { "v": "2026-11-04" }, { "v": "Cloud Storage" }, { "v": "USD" }, { "v": "0.5" } ] },
+    { "f": [ { "v": "2026-11-05" }, { "v": "Compute Engine" }, { "v": "USD" }, { "v": "-0.25" } ] }
+  ],
+  "jobComplete": true
+}

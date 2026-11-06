@@ -1,0 +1,1 @@
+{ "budgets": [ { "name": "billingAccounts/000000-000000-000000/budgets/abc", "displayName": "Monthly", "amount": { "specifiedAmount": { "currencyCode": "USD", "units": "100" } }, "thresholdRules": [ { "thresholdPercent": 0.5 }, { "thresholdPercent": 0.9, "spendBasis": "FORECASTED_SPEND" } ] } ] }
