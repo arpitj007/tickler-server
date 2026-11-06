@@ -14,10 +14,10 @@
     "start": "node dist/node.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx scripts/seed.ts",
+    "seed": "NODE_OPTIONS=--experimental-sqlite tsx scripts/seed.ts",
     "deploy": "wrangler deploy",
     "test:workers": "vitest run --config vitest.workers.config.ts",
-    "reset-admin": "tsx src/node.ts reset-admin",
+    "reset-admin": "NODE_OPTIONS=--experimental-sqlite tsx src/node.ts reset-admin",
     "db:migrate": "wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
