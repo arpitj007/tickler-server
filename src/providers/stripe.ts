@@ -70,7 +70,7 @@ export const stripe: Provider = {
   syncEveryMinutes: 15,
   needsPublicUrl: true,
   fields: [
-    { key: "api_key", label: "Restricted key", secret: true, help: "rk_live_... with Read on Balance, Charges and Subscriptions only." },
+    { key: "api_key", label: "Restricted key", secret: true, help: "rk_live_... with Read on Balance and Subscriptions only." },
     { key: "webhook_secret", label: "Webhook signing secret", secret: true, optional: true, help: "whsec_... from the webhook destination." },
   ],
 
