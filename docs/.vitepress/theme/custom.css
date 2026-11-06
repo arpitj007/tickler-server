@@ -1,16 +1,21 @@
 :root {
-  --vp-c-brand-1: #2f5fc4;
-  --vp-c-brand-2: #3b6fd6;
-  --vp-c-brand-3: #4f82e6;
-  --vp-c-brand-soft: rgba(59, 111, 214, 0.14);
+  /* Tickler orange (the apps' accent). brand-1 is darker so link text keeps 4.5:1 on white. */
+  --vp-c-brand-1: #a8540b;
+  --vp-c-brand-2: #c96a14;
+  --vp-c-brand-3: #f2994a;
+  --vp-c-brand-soft: rgba(242, 153, 74, 0.16);
+  --vp-button-brand-text: #1c1c1e;
+  --vp-button-brand-hover-text: #1c1c1e;
+  --vp-button-brand-active-text: #1c1c1e;
   --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(120deg, #2f5fc4 20%, #e0873a);
+  --vp-home-hero-name-background: linear-gradient(120deg, #1c1c1e 30%, #f2994a);
 }
 
 .dark {
-  --vp-c-brand-1: #8fb0f5;
-  --vp-c-brand-2: #6f97ee;
-  --vp-c-brand-3: #4f82e6;
+  --vp-c-brand-1: #ffad61;
+  --vp-c-brand-2: #f2994a;
+  --vp-c-brand-3: #f2994a;
+  --vp-home-hero-name-background: linear-gradient(120deg, #ffffff 30%, #ffad61);
 }
 
 .vp-doc img {

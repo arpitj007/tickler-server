@@ -57,7 +57,8 @@ export default defineConfig({
   },
   head: [
     ['link', { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }],
-    ['meta', { name: 'theme-color', content: '#3b6fd6' }],
+    ['link', { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }],
+    ['meta', { name: 'theme-color', content: '#1c1c1e' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:site_name', content: 'Tickler' }],
   ],
@@ -92,7 +93,7 @@ export default defineConfig({
     },
   },
   themeConfig: {
-    logo: { src: '/logo.svg', alt: '' },
+    logo: { light: '/logo.svg', dark: '/logo-dark.svg', alt: '' },
     siteTitle: 'Tickler',
     search: { provider: 'local' },
     socialLinks: [{ icon: 'github', link: REPO }],

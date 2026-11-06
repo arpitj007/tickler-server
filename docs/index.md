@@ -6,7 +6,8 @@ hero:
   text: The calendar your AI agents write to
   tagline: Your agents keep saying "I'll do that later." Tickler makes sure later happens, and shows what your apps earn and your services cost. All on your own server.
   image:
-    src: /logo.svg
+    light: /logo.svg
+    dark: /logo-dark.svg
     alt: ''
   actions:
     - theme: brand
