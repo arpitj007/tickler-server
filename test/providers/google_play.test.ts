@@ -86,7 +86,7 @@ describe("google_play reports", () => {
 describe("google_play webhook (RTDN over Pub/Sub push)", () => {
   const req = (auth: string | undefined, body = push(RENEWED), over: Record<string, string> = {}) => ({
     body,
-    headers: auth ? { Authorization: `Bearer ${auth}` } : {},
+    headers: (auth ? { Authorization: `Bearer ${auth}` } : {}) as Record<string, string>,
     url: cfg.pubsub_audience,
     cfg: { ...cfg, ...over },
     fetch: routes().fetch,

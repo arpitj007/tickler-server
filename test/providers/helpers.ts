@@ -9,8 +9,9 @@ export function fixture(path: string): string {
   return readFileSync(join(FIXTURES, path), "utf8");
 }
 
-export function fixtureBytes(path: string): Uint8Array {
-  return new Uint8Array(readFileSync(join(FIXTURES, path)));
+export function fixtureBytes(path: string): Uint8Array<ArrayBuffer> {
+  const b = readFileSync(join(FIXTURES, path));
+  return new Uint8Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer);
 }
 
 export function json(body: unknown, status = 200): Response {

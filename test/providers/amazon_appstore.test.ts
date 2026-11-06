@@ -6,7 +6,7 @@ import { ctx, fixture, fixtureBytes, json, mockFetch, NOW } from "./helpers";
 const CERT_URL = "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-0000000000000000000000.pem";
 const KEY = fixture("amazon_appstore/test-sns.key.pem");
 
-function signed(m: Record<string, string>, version: "1" | "2" = "2") {
+function signed(m: Record<string, string>, version: "1" | "2" = "2"): Record<string, string> {
   const msg = { ...m, SignatureVersion: version, SigningCertURL: m.SigningCertURL ?? CERT_URL };
   const s = createSign(version === "1" ? "RSA-SHA1" : "RSA-SHA256");
   s.update(snsStringToSign(msg));
