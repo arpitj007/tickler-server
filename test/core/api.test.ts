@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { claim, makeApp, setupAll } from "./helpers";
+import { providers } from "../../src/providers";
 
 async function pairingCode(t: ReturnType<typeof makeApp>, cookie: string) {
   const page = await (await t.req("/setup/pair", { cookie })).text();
@@ -248,5 +249,29 @@ describe("misc endpoints", () => {
     expect(list.fixed_costs).toHaveLength(1);
     expect((await t.req(`/api/fixed-costs/${f.id}`, { method: "DELETE", token: s.device })).status).toBe(204);
     expect((await t.req("/api/nope", { token: s.device })).status).toBe(404);
+  });
+});
+
+describe("offline-friendly projects and provider fields", () => {
+  it("accepts a client id for projects and replays a repeated create", async () => {
+    const t = makeApp();
+    const s = await setupAll(t);
+    const id = "5b1c3c1e-8f0e-4b8a-9d55-2f6f2b7f9a01";
+    const a = await t.req("/api/projects", { method: "POST", token: s.device, json: { id, name: "Offline" } });
+    expect(a.status).toBe(201);
+    expect((await a.json()).id).toBe(id);
+    const b = await t.req("/api/projects", { method: "POST", token: s.device, json: { id, name: "Offline" } });
+    expect((await b.json()).id).toBe(id);
+    const list = await (await t.req("/api/projects", { token: s.device })).json();
+    expect(list.projects.filter((p: { name: string }) => p.name === "Offline")).toHaveLength(1);
+  });
+
+  it("includes credential fields in provider status", async () => {
+    const t = makeApp({ providers });
+    const s = await setupAll(t);
+    const body = await (await t.req("/api/money/providers", { token: s.device })).json();
+    const stripe = body.providers.find((p: { provider: string }) => p.provider === "stripe");
+    expect(stripe.fields.length).toBeGreaterThan(0);
+    expect(stripe.fields[0]).toHaveProperty("key");
   });
 });

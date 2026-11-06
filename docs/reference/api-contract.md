@@ -91,7 +91,8 @@ POST /api/pair
   "display_name", "kind": "revenue|cost", "configured": true, "enabled": true,
   "freshness": "hourly", "needs_public_url": false, "public_url_ok": true,
   "last_sync_at", "last_error": null, "guide": "providers/stripe",
-  "last_message": null /* additive: e.g. the Amazon SNS confirmation note from a webhook */ }
+  "last_message": null /* additive: e.g. the Amazon SNS confirmation note from a webhook */,
+  "fields": [{ "key", "label", "secret": true, "multiline"?, "optional"?, "help"? }] /* credential form to render */ }
 
 // MetricSnapshot
 { "id", "provider", "account", "metric": "revenue|proceeds|units|cost|usage|forecast",
@@ -140,7 +141,7 @@ current entry in `error.current`; the app drops its change and takes the server 
 | Method | Path | Body / query | Returns |
 | --- | --- | --- | --- |
 | GET | `/api/projects` | `?archived=true` | `{ projects }` |
-| POST | `/api/projects` | `{ name, color?, icon?, slug? }` | `Project` |
+| POST | `/api/projects` | `{ id?, name, color?, icon?, slug? }` (`id` lets apps create offline; a repeated id returns the existing project) | `Project` |
 | PATCH | `/api/projects/:id` | partial | `Project` |
 | DELETE | `/api/projects/:id` | | archives it, `Project` |
 | GET | `/api/entries` | `?from&to&project_id&status&importance&q&limit≤500` | `{ entries }` (expanded only by date, recurrence not expanded) |

@@ -18,12 +18,13 @@ export interface ProjectRow {
 const PALETTE = ["#5B5BD6", "#E5484D", "#30A46C", "#F5A524", "#0090FF", "#8E4EC6", "#D6409F", "#12A594"];
 
 export const projectCreateSchema = z.object({
+  id: z.string().uuid().optional(), // apps may create projects offline
   name: z.string().trim().min(1).max(80),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   icon: z.string().trim().min(1).max(60).optional(),
   slug: z.string().regex(/^[a-z0-9][a-z0-9-]{0,59}$/).optional(),
 });
-export const projectPatchSchema = projectCreateSchema.partial().extend({ archived: z.boolean().optional() });
+export const projectPatchSchema = projectCreateSchema.omit({ id: true }).partial().extend({ archived: z.boolean().optional() });
 
 export function projectJson(r: ProjectRow) {
   return { ...r, archived: !!r.archived };
@@ -49,6 +50,10 @@ export async function findProject(ctx: Ctx, ref: string): Promise<ProjectRow | n
 }
 
 export async function createProject(ctx: Ctx, input: z.infer<typeof projectCreateSchema>, actor: Actor, action = "create_project") {
+  if (input.id) {
+    const existing = await getProject(ctx, input.id);
+    if (existing) return existing; // retried offline create
+  }
   const now = ctx.now().toISOString();
   let slug = input.slug ?? slugify(input.name);
   if (input.slug && (await ctx.storage.first("SELECT 1 FROM projects WHERE slug = ?", [slug]))) {
@@ -58,7 +63,7 @@ export async function createProject(ctx: Ctx, input: z.infer<typeof projectCreat
     slug = `${slugify(input.name).slice(0, 55)}-${i}`;
   }
   const count = (await ctx.storage.first<{ n: number }>("SELECT COUNT(*) AS n FROM projects"))?.n ?? 0;
-  const id = uuid();
+  const id = input.id ?? uuid();
   await ctx.storage.batch([
     BUMP,
     {

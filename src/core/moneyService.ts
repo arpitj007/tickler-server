@@ -59,6 +59,7 @@ export async function providerStatus(ctx: Ctx, id: string, baseUrl: string | nul
     last_error: r?.last_error ?? null,
     last_message: r?.last_message ?? null,
     guide: p?.guide ?? `providers/${id.replace(/_/g, "-")}`,
+    fields: p?.fields ?? [],
   };
 }
 export type ProviderStatus = Awaited<ReturnType<typeof providerStatus>>;
