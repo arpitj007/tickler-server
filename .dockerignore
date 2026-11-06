@@ -1,0 +1,15 @@
+node_modules
+dist
+data
+.wrangler
+.git
+.github
+.dev.vars
+*.sqlite
+*.sqlite-*
+coverage
+docs
+launch
+test
+seed
+hooks

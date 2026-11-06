@@ -1,0 +1,19 @@
+# docker compose up -d, then open http://localhost:8787/setup
+# The claim secret is printed in the log on first start (docker compose logs tickler),
+# unless you set TICKLER_SECRET yourself.
+services:
+  tickler:
+    image: ghcr.io/arpitj007/tickler-server:latest
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - tickler:/data
+    environment:
+      # TICKLER_SECRET: "a long random value"   # optional; generated and kept in /data if unset
+      # TICKLER_PUBLIC_URL: "https://tickler.example.com"   # your tunnel URL, for phones and webhooks
+      TICKLER_SERVER_NAME: "Tickler"
+      TICKLER_CURRENCY: "USD"
+volumes:
+  tickler:
