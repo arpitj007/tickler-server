@@ -107,5 +107,11 @@ export interface WebhookHandler {
     cfg: ProviderConfig; // the store's provider config (shared secrets, expected audience...)
     fetch: typeof fetch;
     now: Date;
-  }): Promise<{ events: SalesEventInput[]; response?: { status: number; body?: string } }>;
+  }): Promise<{
+    events: SalesEventInput[];
+    response?: { status: number; body?: string };
+    /** Additive: a message for the owner (e.g. the Amazon SNS confirmation token). The core
+     *  should show it on /setup or store it as the provider's last message. */
+    notice?: string;
+  }>;
 }
