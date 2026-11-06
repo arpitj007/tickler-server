@@ -52,6 +52,7 @@ Yes. Both use the same database schema. Export the D1 database with Wrangler as 
 | `TICKLER_SECRET` | Encrypts provider keys. Required. Keep it safe and the same across updates. | none |
 | `TICKLER_PUBLIC_URL` | Your public address, used in QR codes and webhook addresses. | detected from requests |
 | `TICKLER_CURRENCY` | Base currency for Money totals and budgets. | `USD` |
+| `TICKLER_SERVER_NAME` | The name the app shows for this server, like "Home". You can also set it on `/setup`. | `Tickler` |
 
 ## What does the server need to reach on the internet?
 
