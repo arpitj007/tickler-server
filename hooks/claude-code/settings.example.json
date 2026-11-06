@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__tickler__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/hooks/tickler-origin.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
