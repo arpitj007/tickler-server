@@ -1,0 +1,25 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:workers
+      - name: Deploy button config builds (dry run)
+        run: npx wrangler deploy --dry-run --outdir /tmp/worker
+      - run: npm run build:node
+      - name: Demo seed is up to date
+        run: npm run seed -- generate && git diff --exit-code seed/
