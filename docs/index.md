@@ -28,7 +28,7 @@ features:
   - title: Money at a glance
     details: Store sales, cloud and AI costs, budgets and month-end forecasts, always with an "as of" time.
   - title: Your server, your data
-    details: Runs free on your own Cloudflare account or in Docker. We never see your entries, keys or numbers.
+    details: Runs free on your own Cloudflare account or in Docker, where we never see your entries, keys or numbers. Or let Tickler Cloud host it for you.
 ---
 
 ## What it looks like

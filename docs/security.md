@@ -6,7 +6,8 @@ To report a vulnerability, see [Reporting a problem](#reporting-a-problem) below
 
 ## The short version
 
-- Your entries, projects, origins, provider keys and money numbers live on **your** server and **your** phone. Nothing goes to us. We run no backend that stores user data.
+- **Self-hosted:** your entries, projects, origins, provider keys and money numbers live on **your** server and **your** phone. Nothing goes to us.
+- **Tickler Cloud:** each customer's server is a separate Durable Object with its own SQLite database, reachable only through its own address and its own tokens. Provider keys are encrypted with a key unique to that server. The control plane stores only the account (Apple user id, email, subscription state), never server contents. Internal provisioning routes are not reachable from the internet and need a key derived from the Cloud secret.
 - Every client (phone, AI tool) gets its own token. Only a hash of each token is stored. Any of them can be revoked on its own.
 - Provider keys are encrypted on your server and are **read-only** keys you create.
 - Store webhooks are verified before anything is recorded.

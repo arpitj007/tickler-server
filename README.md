@@ -6,7 +6,15 @@ This is the small server you run yourself. Your agents (Claude Code, the Claude 
 Codex, ChatGPT, Gemini CLI, anything that speaks MCP) write follow-ups, deadlines, launches and
 scheduled runs to it, each one linked back to the chat or session that created it. The Tickler
 app on your phone shows them on a timeline, together with what your apps earn and your services
-cost. Your data stays on your server; we never see it.
+cost.
+
+Two ways to run it:
+
+- **Self-hosted** (this repo, free): your data stays on your server; we never see it.
+- **Tickler Cloud** (subscription in the app): we host a private server for you. It runs this same
+  code, one isolated database per customer; see the [privacy policy](https://docs.gettickler.com/privacy)
+  for what that means for your data. Cloud's own code is in `src/cloud/` and
+  [`docs/reference/cloud-contract.md`](docs/reference/cloud-contract.md).
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/arpitj007/tickler-server)
 
