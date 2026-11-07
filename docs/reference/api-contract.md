@@ -12,7 +12,8 @@ Product spec: `/Users/aj/dev/tickler-prompt.md` (the app repo is `tickler-app`, 
 - IDs are UUID v4 strings, lowercase.
 - Errors: HTTP 4xx/5xx with `{ "error": { "code": "not_found", "message": "..." } }`.
   Codes: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`,
-  `pairing_expired`, `validation_failed` (HTTP 422, with `error.fields: { field: message }`), `internal`.
+  `pairing_expired`, `validation_failed` (HTTP 422, with `error.fields: { field: message }`), `internal`,
+  `subscription_required` (HTTP 402, Tickler Cloud only: see `cloud-contract.md`).
 - Money values are JSON numbers in major units (`12.34`) with an ISO 4217 `currency`.
 - Every mutable row carries `rev` (integer). The server keeps one global, monotonically
   increasing sequence; every insert, update or soft delete sets `rev = next_seq()`. Sync uses it.
@@ -45,7 +46,8 @@ POST /api/pair
 → 400 pairing_expired | 404 not_found (wrong code) | 429 rate_limited
 
 Instead of `code`, the app may send `"server_key"` (the TICKLER_SECRET it generated before deploying).
-Same response; 401 unauthorized if the key is wrong. The rate limit is shared with codes.
+Same response; 401 unauthorized if the key is wrong. The rate limit is shared with codes. Tickler Cloud
+servers refuse `server_key` (400) and pair through the account (`cloud-contract.md`).
 ```
 
 ## Connecting AI tools
@@ -67,7 +69,7 @@ approval (10 minutes) and the page waits for the phone, showing the two-digit `m
 ## Health
 
 `GET /api/health` (no auth) → `{ "ok": true, "name": "tickler", "version": "0.1.0", "api": 1,
-"server_name": "Personal", "public_url": "https://..." | null }`
+"server_name": "Personal", "public_url": "https://..." | null, "hosting": "self" | "cloud" }`
 
 `GET /api/me` → `{ "device": Device, "server_name": "Personal" }`
 
@@ -193,6 +195,7 @@ current entry in `error.current`; the app drops its change and takes the server 
 | GET/POST/PATCH/DELETE | `/api/fixed-costs[/:id]` | `FixedCost` fields | `FixedCost` |
 | POST | `/api/metrics` | device or `tkm_` token: `{ provider: "manual", account?, metric, unit, value, period_start, period_end?, label? }` | `MetricSnapshot` |
 | GET | `/api/export` | | everything as one JSON (no secrets) |
+| POST | `/api/import` | an `/api/export` document | `{ imported: { projects, origins, entries, budgets, alerts, metric_snapshots, sales_events, fixed_costs } }` counts of rows added. Rows keep their ids; ids that exist are skipped. A project with the same `slug` or an origin with the same client session already here is merged into the existing one. Devices, tokens, provider keys and activity are not imported. |
 
 Money summary:
 

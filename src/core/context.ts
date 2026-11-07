@@ -10,6 +10,8 @@ export interface Config {
   currency: string;
   /** TICKLER_DEMO_PAIRING_CODE: review/demo servers only. Always accepted, never used up. */
   demoPairingCode: string | null;
+  /** TICKLER_HOSTING: "cloud" on Tickler Cloud (no /setup, no admin, paired through the account), else "self". */
+  hosting: "self" | "cloud";
 }
 
 export interface Ctx {
@@ -19,6 +21,8 @@ export interface Ctx {
   providers: Provider[];
   webhookHandlers: WebhookHandler[];
   fetch: typeof fetch;
+  /** Throws 402 subscription_required when writes are not allowed (an expired Tickler Cloud server). */
+  writeGuard?: () => Promise<void>;
 }
 
 export type ActorType = "device" | "mcp_token" | "oauth_client" | "admin" | "system";
@@ -41,5 +45,6 @@ export function configFromEnv(env: Record<string, unknown>): Config {
     publicUrl: str("TICKLER_PUBLIC_URL")?.replace(/\/+$/, "") ?? null,
     currency: (str("TICKLER_CURRENCY") ?? "USD").toUpperCase(),
     demoPairingCode: str("TICKLER_DEMO_PAIRING_CODE")?.toUpperCase().replace(/[\s-]/g, "") ?? null,
+    hosting: str("TICKLER_HOSTING") === "cloud" ? "cloud" : "self",
   };
 }

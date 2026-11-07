@@ -1,0 +1,48 @@
+// Tickler Cloud: the control plane and every customer server (one SQLite Durable Object each).
+// Deploy: npx wrangler deploy -c wrangler.cloud.jsonc --env staging   (or without --env for production)
+// Secrets: CLOUD_SECRET (required); APPLE_TEAM_ID, APPLE_SIWA_KEY_ID, APPLE_SIWA_PRIVATE_KEY (Sign in
+// with Apple token exchange and revocation on account deletion).
+// Docs checked 2026-11-08: https://developers.cloudflare.com/durable-objects/best-practices/access-durable-objects-storage/
+// and https://developers.cloudflare.com/workers/wrangler/environments/
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tickler-cloud",
+  "main": "src/cloud/worker.ts",
+  "compatibility_date": "2026-08-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
+  "durable_objects": { "bindings": [{ "name": "SERVERS", "class_name": "TicklerServer" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TicklerServer"] }],
+  "d1_databases": [{ "binding": "CLOUD_DB", "database_name": "tickler-cloud", "migrations_dir": "migrations-cloud" }],
+  // Daily: delete servers past their read-only window, expire subscriptions whose renewal never came.
+  "triggers": { "crons": ["30 5 * * *"] },
+  "vars": {
+    "CLOUD_DOMAIN": "tickler.cloud",
+    "CLOUD_SERVER_URL": "https://{id}.tickler.cloud",
+    "APPLE_BUNDLE_ID": "com.gettickler.tickler",
+    "CLOUD_ACCEPT_SANDBOX": "false"
+  },
+  // Turn on once tickler.cloud is a zone in this account (wildcard DNS record "*" proxied).
+  // "routes": [
+  //   { "pattern": "tickler.cloud/*", "zone_name": "tickler.cloud" },
+  //   { "pattern": "*.tickler.cloud/*", "zone_name": "tickler.cloud" }
+  // ],
+  "workers_dev": false,
+  "env": {
+    "staging": {
+      "name": "tickler-cloud-staging",
+      "workers_dev": true,
+      "durable_objects": { "bindings": [{ "name": "SERVERS", "class_name": "TicklerServer" }] },
+      "d1_databases": [{ "binding": "CLOUD_DB", "database_name": "tickler-cloud-staging", "migrations_dir": "migrations-cloud" }],
+      "triggers": { "crons": ["30 5 * * *"] },
+      "vars": {
+        "CLOUD_DOMAIN": "",
+        "CLOUD_SERVER_URL": "https://tickler-cloud-staging.vela-xtream.workers.dev/s/{id}",
+        "APPLE_BUNDLE_ID": "com.gettickler.tickler",
+        // TestFlight and Xcode purchases are sandbox transactions.
+        "CLOUD_ACCEPT_SANDBOX": "true"
+      }
+    }
+  }
+}

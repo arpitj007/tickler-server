@@ -42,7 +42,7 @@ export async function pairWithServerKey(ctx: Ctx, key: string, name: string, pla
   return issueDeviceToken(ctx, name, platform);
 }
 
-async function issueDeviceToken(ctx: Ctx, name: string, platform: string) {
+export async function issueDeviceToken(ctx: Ctx, name: string, platform: string) {
   const now = ctx.now();
   const token = randomToken("tkd_");
   const id = uuid();

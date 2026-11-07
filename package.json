@@ -19,7 +19,8 @@
     "test:workers": "vitest run --config vitest.workers.config.ts",
     "reset-admin": "NODE_OPTIONS=--experimental-sqlite tsx src/node.ts reset-admin",
     "db:migrate": "wrangler d1 migrations apply DB --remote",
-    "provider": "tsx scripts/provider.ts"
+    "provider": "tsx scripts/provider.ts",
+    "test:cloud": "vitest run --config vitest.cloud.config.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.6",

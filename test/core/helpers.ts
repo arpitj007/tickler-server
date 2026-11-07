@@ -23,6 +23,7 @@ export function makeApp(over: Partial<AppDeps> & { start?: string; env?: Record<
     fetch: over.fetch,
     now: () => new Date(clock.t),
     getIp: (req) => req.headers.get("x-test-ip") ?? "10.0.0.1",
+    writeGuard: over.writeGuard,
   });
   const req = (path: string, init: RequestInit & { json?: unknown; token?: string; cookie?: string } = {}) => {
     const headers = new Headers(init.headers);

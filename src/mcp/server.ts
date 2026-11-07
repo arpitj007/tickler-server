@@ -76,6 +76,7 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
   );
 
   const writeMeta = async (origin: OriginInput | undefined, action: string): Promise<WriteMeta> => {
+    await ctx.writeGuard?.();
     await rateLimit(ctx, `mcp-write:${principal.actor.type}:${principal.actor.id}`, WRITES_PER_MINUTE, 60);
     let o = origin;
     let flagged = false;
@@ -302,6 +303,7 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
     },
     async (a) => {
       try {
+        await ctx.writeGuard?.();
         await rateLimit(ctx, `mcp-write:${principal.actor.type}:${principal.actor.id}`, WRITES_PER_MINUTE, 60);
         const existing = await findProject(ctx, a.name);
         if (existing) return ok({ project: projectJson(existing), created: false });

@@ -285,7 +285,8 @@ oauth.get("/authorize", async (c) => {
     const next = c.req.url.slice(new URL(c.req.url).origin.length);
     const match = String(10 + Math.floor(Math.random() * 90));
     const { id, secret } = await createApproval(ctx, r.client.id, { auth: { ...r.params }, client_name: r.client.name, match });
-    const poll = `/oauth/approvals/${id}?s=${encodeURIComponent(secret)}`;
+    // Relative to the server's base path: Tickler Cloud staging serves each server under /s/<id>.
+    const poll = `${new URL(c.get("baseUrl")).pathname.replace(/\/$/, "")}/oauth/approvals/${id}?s=${encodeURIComponent(secret)}`;
     return oauthPage(
       c,
       "Approve on your phone",

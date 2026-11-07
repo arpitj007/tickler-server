@@ -25,6 +25,7 @@ import { rateLimit } from "../core/rateLimit";
 import { API_VERSION, ApiError, VERSION } from "../core/util";
 import { clientIp, errorResponse, intParam, jsonBody, parse, type C, type Env } from "./http";
 import { exportAll } from "../core/export";
+import { importAll, importSchema } from "../core/import";
 import { connectCommand, createConnectCode } from "../core/connectCli";
 import { decideApproval, pendingApprovals } from "../core/approvals";
 
@@ -43,6 +44,7 @@ api.get("/health", (c) => {
     api: API_VERSION,
     server_name: ctx.config.serverName,
     public_url: ctx.config.publicUrl ?? c.get("baseUrl"),
+    hosting: ctx.config.hosting,
   });
 });
 
@@ -61,6 +63,9 @@ api.post("/pair", async (c) => {
       })
       .refine((v) => v.code || v.server_key, { message: "Send code or server_key" }),
   );
+  if (b.server_key && ctx.config.hosting === "cloud") {
+    throw new ApiError(400, "bad_request", "Tickler Cloud servers pair through your account in the app.");
+  }
   const r = b.server_key
     ? await pairWithServerKey(ctx, b.server_key, b.device_name, b.platform)
     : await pairDevice(ctx, b.code!, b.device_name, b.platform);
@@ -117,6 +122,15 @@ const idempotency: MiddlewareHandler<Env> = async (c, next) => {
 const isPublic = (c: C) => ["/api/health", "/api/pair"].includes(c.req.path.replace(/\/+$/, ""));
 api.use("*", async (c, next) => (isPublic(c) ? next() : requireAuth(c, next)));
 api.use("*", async (c, next) => (isPublic(c) ? next() : idempotency(c, next)));
+
+/** An expired Tickler Cloud server is read-only. Approving connectors and removing devices still work. */
+api.use("*", async (c, next) => {
+  const guard = c.get("ctx").writeGuard;
+  const path = c.req.path.replace(/\/+$/, "");
+  const allowed = isPublic(c) || path.startsWith("/api/approvals") || (c.req.method === "DELETE" && path.startsWith("/api/devices/"));
+  if (guard && !allowed && c.req.method !== "GET" && c.req.method !== "HEAD") await guard();
+  await next();
+});
 
 const meta = (c: C, action: string) => ({ actor: c.get("principal").actor, action, source: "manual" as const });
 
@@ -196,6 +210,11 @@ api.get("/changes", async (c) => {
 api.get("/export", async (c) => {
   c.header("content-disposition", 'attachment; filename="tickler-export.json"');
   return c.json(await exportAll(c.get("ctx")));
+});
+
+api.post("/import", async (c) => {
+  const doc = await jsonBody(c, importSchema);
+  return c.json(await importAll(c.get("ctx"), doc, c.get("principal").actor));
 });
 
 // ---------- projects

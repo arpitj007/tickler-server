@@ -1,5 +1,5 @@
 // Builds the Hono app shared by the Cloudflare Worker (src/worker.ts) and Node (src/node.ts).
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { authenticate, bearer } from "./core/auth";
 import { configFromEnv, type Config, type Ctx } from "./core/context";
 import { recordMcpCall } from "./core/devices";
@@ -29,6 +29,8 @@ export interface AppDeps {
   now?: () => Date;
   /** Client IP for rate limits. Workers: cf-connecting-ip. Node: the socket address. */
   getIp?: (req: Request, env: unknown) => string | undefined;
+  /** Tickler Cloud: throws 402 subscription_required while the subscription is expired. */
+  writeGuard?: () => Promise<void>;
 }
 
 export function makeCtx(deps: AppDeps, config: Config = configFromEnv(deps.env)): Ctx {
@@ -39,6 +41,7 @@ export function makeCtx(deps: AppDeps, config: Config = configFromEnv(deps.env))
     providers: deps.providers ?? defaultProviders,
     webhookHandlers: deps.webhookHandlers ?? defaultHooks,
     fetch: deps.fetch ?? ((...a) => fetch(...a)),
+    writeGuard: deps.writeGuard,
   };
 }
 
@@ -102,10 +105,24 @@ export function createApp(deps: AppDeps) {
 
   app.notFound((c) => c.json(errorResponse(new ApiError(404, "not_found", "No such endpoint")), 404));
 
-  app.get("/", (c) => c.redirect("/setup"));
   app.get("/robots.txt", (c) => c.text("User-agent: *\nDisallow: /\n"));
   app.route("/api", api);
-  app.route("/setup", setup);
+  if (ctx.config.hosting === "cloud") {
+    // Tickler Cloud servers have no admin login: the account in the app owns the server.
+    const managed = (c: Context<Env>) =>
+      c.html(
+        `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tickler Cloud</title>` +
+          `<body style="font-family:system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem;line-height:1.5">` +
+          `<h1>Tickler Cloud</h1><p>This server is managed from the Tickler app. Pair phones, connect AI tools and ` +
+          `manage your subscription there.</p></body>`,
+      );
+    app.get("/", managed);
+    app.all("/setup", managed);
+    app.all("/setup/*", managed);
+  } else {
+    app.get("/", (c) => c.redirect("/setup"));
+    app.route("/setup", setup);
+  }
   app.route("/oauth", oauth);
   app.route("/.well-known", wellKnown);
   app.route("/hooks", hooks);
