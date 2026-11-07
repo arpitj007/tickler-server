@@ -28,7 +28,7 @@ In ChatGPT on the web, open **Settings**, then **Apps** (or **Connectors**), the
 
 ## Step 3: Sign in to your own server
 
-ChatGPT opens a page from **your own server**. Log in with your passkey or passphrase and press **Allow**. Your server gives ChatGPT its own key, which you can revoke in setup under **AI tools**, then **Connected apps**.
+ChatGPT opens a page from **your own server** with a two-digit number. In the Tickler app on your phone, check the number matches and tap **Allow**. (Or sign in on that page with your passkey or passphrase, if you set one up.) Your server gives ChatGPT its own key, which you can revoke in setup under **AI tools**, then **Connected apps**.
 
 ## Step 4: Use it in a chat
 

@@ -15,6 +15,7 @@ import {
   MIN_PASSPHRASE, saveChallenge, SESSION_COOKIE, SESSION_TTL_MS, takeChallenge, validSession,
 } from "../core/admin";
 import { connectClients, INSTRUCTION_BLOCK } from "../core/connect";
+import { connectCommand, createConnectCode } from "../core/connectCli";
 import {
   createPairingCode, createToken, listDevices, listOAuthClients, listTokens, PAIRING_TTL_MS, revokeDevice, revokeOAuthClient, revokeToken,
 } from "../core/devices";
@@ -108,12 +109,13 @@ function ClaimForm(props: { error?: string }) {
     <div class="card">
       <h1>Welcome to your Tickler server</h1>
       <p class="muted">
-        Create the admin login. To prove this is your server, enter the TICKLER_SECRET you set when you deployed it (on Docker it
-        is in the container log and in the data folder as <code>secret</code>).
+        Create the admin login. To prove this is your server, enter the server key (TICKLER_SECRET) you set when you deployed it. If
+        the Tickler app made it for you, copy it from the app: Settings, your server, Server key. On Docker it is in the container
+        log and in the data folder as <code>secret</code>.
       </p>
       <Flash error={props.error} />
       <form method="post" action="/setup/claim">
-        <label for="secret">TICKLER_SECRET</label>
+        <label for="secret">Server key (TICKLER_SECRET)</label>
         <input id="secret" name="secret" type="password" autocomplete="off" required />
         <label for="pass">Admin passphrase (at least {MIN_PASSPHRASE} characters)</label>
         <input id="pass" name="passphrase" type="password" autocomplete="new-password" minlength={MIN_PASSPHRASE} required />
@@ -439,7 +441,12 @@ setup.get("/pair", async (c) => {
     "Pair a phone",
     <div class="card">
       <h1>Pair a phone</h1>
-      <p>In the Tickler app, choose "Set up my server", then "Scan QR code".</p>
+      <p>On this phone? Tap the button. On a computer? In the Tickler app, choose "Get started", then "Scan a pairing code".</p>
+      <div class="row">
+        <a class="btn" href={payload}>
+          Open in the Tickler app
+        </a>
+      </div>
       <div class="qr">{raw(svg)}</div>
       <p class="muted">Or enter it by hand:</p>
       <p>
@@ -461,7 +468,7 @@ setup.get("/pair", async (c) => {
 
 // ---------- AI tools
 
-function ConnectPage(props: { base: string; token?: string; tokenName?: string }) {
+function ConnectPage(props: { base: string; token?: string; tokenName?: string; command?: string }) {
   const clients = connectClients(props.base, props.token ?? "<TOKEN>");
   return (
     <>
@@ -481,6 +488,16 @@ function ConnectPage(props: { base: string; token?: string; tokenName?: string }
           </form>
         </div>
       )}
+      {props.command ? (
+        <div class="card">
+          <h2>Connect this computer in one step</h2>
+          <p class="muted">
+            Sets up Claude Code, Codex, Cursor and Gemini CLI (whichever are installed), with the origin hook and the instructions.
+            Paste into a terminal on a Mac or Linux computer. Works once, for 15 minutes.
+          </p>
+          <Copy text={props.command} />
+        </div>
+      ) : null}
       {clients.map((cl) => (
         <div class="card">
           <details open={!!props.token && cl.auth === "token" ? true : undefined}>
@@ -511,7 +528,10 @@ function ConnectPage(props: { base: string; token?: string; tokenName?: string }
   );
 }
 
-setup.get("/connect", (c) => page(c, "AI tools", <ConnectPage base={c.get("baseUrl")} />));
+setup.get("/connect", async (c) => {
+  const { code } = await createConnectCode(c.get("ctx"), ADMIN);
+  return page(c, "AI tools", <ConnectPage base={c.get("baseUrl")} command={connectCommand(c.get("baseUrl"), code)} />);
+});
 
 setup.post("/tokens", async (c) => {
   const f = await c.req.parseBody();

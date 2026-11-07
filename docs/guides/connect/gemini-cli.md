@@ -2,6 +2,8 @@
 
 **Time:** about 2 minutes.
 
+**Fastest:** in the Tickler app, open **AI tools** and paste the one-line command into a terminal on this computer. It sets up Gemini CLI and its instructions for you. The steps below are the same thing by hand.
+
 ## Step 1: Add the Tickler server
 
 Run:

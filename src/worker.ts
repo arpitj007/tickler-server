@@ -4,11 +4,13 @@ import { createApp } from "./app";
 import { d1Storage } from "./storage/d1";
 import m0001 from "../migrations/0001_init.sql";
 import m0002 from "../migrations/0002_provider_message.sql";
+import m0003 from "../migrations/0003_connect.sql";
 
 /** Keep in sync with migrations/ (test/migrations.test.ts checks it). */
 export const MIGRATIONS = [
   { name: "0001_init.sql", sql: m0001 },
   { name: "0002_provider_message.sql", sql: m0002 },
+  { name: "0003_connect.sql", sql: m0003 },
 ];
 
 export interface WorkerEnv {

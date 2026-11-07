@@ -43,7 +43,26 @@ POST /api/pair
 { "code": "K7Q2MXRP", "device_name": "AJ's iPhone", "platform": "ios" | "android" }
 → 200 { "device_id": "...", "token": "tkd_...", "server": { "name": "Personal", "version": "0.1.0", "api": 1 } }
 → 400 pairing_expired | 404 not_found (wrong code) | 429 rate_limited
+
+Instead of `code`, the app may send `"server_key"` (the TICKLER_SECRET it generated before deploying).
+Same response; 401 unauthorized if the key is wrong. The rate limit is shared with codes.
 ```
+
+## Connecting AI tools
+
+```
+POST /api/connect-codes        → 201 { "code": "K7Q2MXRP", "expires_at": "…Z", "command": "curl -fsSL https://…/c/K7Q2MXRP | sh" }
+GET  /c/<code>                 (no auth) the shell script; holds no secret. Expired or used codes get a script that says so.
+POST /c/<code>                 (no auth, form: clients=claude-code,codex,cursor,gemini-cli&computer=…) single use
+                               → text lines "<client> <tkm_token>", one token per tool named "<Tool> on <computer>";
+                               a token with the same name is replaced.
+GET  /api/approvals            → { "approvals": [{ "id", "client_name", "redirect_host", "match", "created_at", "expires_at" }] }
+POST /api/approvals/<id>       { "decision": "allow" | "deny" } → 204 | 404 (expired)
+```
+
+When an OAuth client hits `/oauth/authorize` without an admin session, the server makes a pending
+approval (10 minutes) and the page waits for the phone, showing the two-digit `match`. Deep link:
+`tickler://approve/<id>`.
 
 ## Health
 
@@ -216,7 +235,7 @@ that code (never expires, never used up). Never set it on a real server.
 ## Deep links (apps)
 
 `tickler://entry/<id>`, `tickler://project/<slug>`, `tickler://origin/<id>`,
-`tickler://money/<provider>`, `tickler://pair?url=…&code=…`.
+`tickler://money/<provider>`, `tickler://pair?url=…&code=…`, `tickler://approve/<id>`.
 
 ## Demo data
 

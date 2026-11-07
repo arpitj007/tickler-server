@@ -25,7 +25,7 @@ Add Tickler as a **custom connector** in Claude on the web, desktop or mobile. C
 
 ## Step 2: Sign in to your own server
 
-Press **Connect** next to Tickler. A page from **your own server** opens and asks you to log in with your passkey or passphrase, then to allow Claude access. Press **Allow**.
+Press **Connect** next to Tickler. A page from **your own server** opens and shows a two-digit number. Open the Tickler app on your phone: it asks "Allow Claude to use Tickler?" with the same number. Tap **Allow**, and Claude finishes connecting. (If you set up a passphrase or passkey on the server, you can sign in on that page instead.)
 
 Claude never sees your passphrase. Your server gives Claude its own key, which you can revoke any time in setup under **AI tools**, then **Connected apps**.
 

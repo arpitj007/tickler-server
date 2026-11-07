@@ -11,6 +11,7 @@ import { handleMcp, inferClient } from "./mcp/server";
 import { oauth, wellKnown, wwwAuthenticate } from "./oauth/routes";
 import type { Provider, WebhookHandler } from "./providers/types";
 import { api } from "./routes/api";
+import { connect } from "./routes/connect";
 import { hooks } from "./routes/hooks";
 import { errorResponse, zodFields, type Env } from "./routes/http";
 import { setup } from "./setup/routes";
@@ -108,6 +109,7 @@ export function createApp(deps: AppDeps) {
   app.route("/oauth", oauth);
   app.route("/.well-known", wellKnown);
   app.route("/hooks", hooks);
+  app.route("/c", connect);
 
   app.on(["GET", "DELETE"], "/mcp", (c) => {
     c.header("allow", "POST");

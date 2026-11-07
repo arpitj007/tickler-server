@@ -6,7 +6,7 @@ import { authenticate, bearer } from "../core/auth";
 import { getChanges } from "../core/changes";
 import { connectClients, INSTRUCTION_BLOCK } from "../core/connect";
 import {
-  createToken, deviceJson, lastMcpCall, listDevices, listOAuthClients, listTokens, pairDevice, revokeDevice, revokeOAuthClient,
+  createToken, deviceJson, lastMcpCall, listDevices, listOAuthClients, listTokens, pairDevice, pairWithServerKey, revokeDevice, revokeOAuthClient,
   revokeToken, tokenJson,
 } from "../core/devices";
 import {
@@ -25,6 +25,8 @@ import { rateLimit } from "../core/rateLimit";
 import { API_VERSION, ApiError, VERSION } from "../core/util";
 import { clientIp, errorResponse, intParam, jsonBody, parse, type C, type Env } from "./http";
 import { exportAll } from "../core/export";
+import { connectCommand, createConnectCode } from "../core/connectCli";
+import { decideApproval, pendingApprovals } from "../core/approvals";
 
 export const api = new Hono<Env>();
 
@@ -49,9 +51,19 @@ api.post("/pair", async (c) => {
   await rateLimit(ctx, `pair:${clientIp(c)}`, 10, 600);
   const b = await jsonBody(
     c,
-    z.object({ code: z.string().min(4).max(20), device_name: z.string().max(80).default("Phone"), platform: z.string().max(20).default("other") }),
+    z
+      .object({
+        code: z.string().min(4).max(20).optional(),
+        // The server key (TICKLER_SECRET). The app makes it before deploying, so it can pair without a /setup visit.
+        server_key: z.string().min(16).max(200).optional(),
+        device_name: z.string().max(80).default("Phone"),
+        platform: z.string().max(20).default("other"),
+      })
+      .refine((v) => v.code || v.server_key, { message: "Send code or server_key" }),
   );
-  const r = await pairDevice(ctx, b.code, b.device_name, b.platform);
+  const r = b.server_key
+    ? await pairWithServerKey(ctx, b.server_key, b.device_name, b.platform)
+    : await pairDevice(ctx, b.code!, b.device_name, b.platform);
   return c.json({ ...r, server: { name: ctx.config.serverName, version: VERSION, api: API_VERSION } });
 });
 
@@ -146,6 +158,20 @@ api.delete("/oauth-clients/:id", async (c) => {
 api.get("/activity", async (c) => {
   const before = c.req.query("before") ?? null;
   return c.json({ activity: await listActivity(c.get("ctx"), before, intParam(c.req.query("limit"), 100, 200)) });
+});
+
+/** One command that connects every AI tool on a computer: `curl -fsSL <server>/c/<code> | sh`. */
+api.post("/connect-codes", async (c) => {
+  const r = await createConnectCode(c.get("ctx"), c.get("principal").actor);
+  return c.json({ ...r, command: connectCommand(c.get("baseUrl"), r.code) }, 201);
+});
+
+/** OAuth connectors waiting for the phone to allow them. */
+api.get("/approvals", async (c) => c.json({ approvals: await pendingApprovals(c.get("ctx")) }));
+api.post("/approvals/:id", async (c) => {
+  const b = await jsonBody(c, z.object({ decision: z.enum(["allow", "deny"]) }));
+  await decideApproval(c.get("ctx"), c.req.param("id"), b.decision === "allow", c.get("principal").actor);
+  return c.body(null, 204);
 });
 
 api.get("/mcp/last-call", async (c) => c.json(await lastMcpCall(c.get("ctx"), c.req.query("since") ?? null)));

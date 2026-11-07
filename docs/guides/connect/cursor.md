@@ -2,6 +2,8 @@
 
 **Time:** about 2 minutes.
 
+**Fastest:** in the Tickler app, open **AI tools** and paste the one-line command into a terminal on this computer. It sets up Cursor for you. The steps below are the same thing by hand.
+
 ## Step 1: Add Tickler to Cursor's MCP settings
 
 Open (or create) the file `~/.cursor/mcp.json` in your home folder. You can also get there from Cursor: **Settings**, then **MCP**, then **Add new global MCP server**.

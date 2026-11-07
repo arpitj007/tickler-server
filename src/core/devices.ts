@@ -1,7 +1,7 @@
 import { logActivity } from "./activity";
 import type { Actor, Ctx } from "./context";
 import type { DeviceRow, McpTokenRow } from "./auth";
-import { ApiError, pairingCode, randomToken, sha256hex, uuid } from "./util";
+import { ApiError, pairingCode, randomToken, sha256hex, timingSafeEqual, uuid } from "./util";
 
 export const PAIRING_TTL_MS = 10 * 60_000;
 
@@ -31,6 +31,14 @@ export async function pairDevice(ctx: Ctx, rawCode: string, name: string, platfo
   // Single use, even under concurrent requests.
   const claim = await ctx.storage.run("UPDATE pairing_codes SET used_at = ? WHERE code = ? AND used_at IS NULL", [now.toISOString(), code]);
   if (claim.changes !== 1) throw new ApiError(400, "pairing_expired", "This pairing code was already used.");
+  return issueDeviceToken(ctx, name, platform);
+}
+
+/** Pair with the server key (TICKLER_SECRET) instead of a one-time code. Whoever holds the key owns the server anyway. */
+export async function pairWithServerKey(ctx: Ctx, key: string, name: string, platform: string) {
+  if (!ctx.config.secret || !timingSafeEqual(key.trim(), ctx.config.secret)) {
+    throw new ApiError(401, "unauthorized", "That isn't this server's key.");
+  }
   return issueDeviceToken(ctx, name, platform);
 }
 

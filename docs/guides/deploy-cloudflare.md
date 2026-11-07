@@ -4,6 +4,8 @@ This is the recommended way to run your Tickler server. It runs in your own Clou
 
 **Time:** about 5 minutes, most of it waiting for the first build.
 
+**Using the app?** Tap **Get started**, then **Deploy to Cloudflare**. The app makes your server key and copies it. Paste it when Cloudflare asks for `TICKLER_SECRET`, press **Create and deploy**, then paste your server's address back into the app. That's all; you can skip step 4 below.
+
 **You need:** a free Cloudflare account and a free GitHub (or GitLab) account. You can create both during the steps below.
 
 ## What you will end up with
@@ -28,7 +30,7 @@ Log in to Cloudflare, or create a free account if you don't have one.
 
 1. When asked, connect your GitHub or GitLab account. Cloudflare makes a copy of the Tickler code there. This is how you get updates later.
 2. Keep the suggested names (`tickler` for the Worker and `tickler-db` for the database) unless you want different ones.
-3. You will be asked for one secret, `TICKLER_SECRET`. It encrypts the provider keys you may add later. Paste a long random value. Any password manager can make one, or run this in a terminal:
+3. You will be asked for one secret, `TICKLER_SECRET`: your server key. It encrypts the provider keys you may add later. If you started from the app, paste the key it copied. Otherwise paste a long random value. Any password manager can make one, or run this in a terminal:
 
 ```
 openssl rand -base64 32

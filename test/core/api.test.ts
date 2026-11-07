@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claim, makeApp, setupAll } from "./helpers";
+import { claim, makeApp, SECRET, setupAll } from "./helpers";
 import { providers } from "../../src/providers";
 
 async function pairingCode(t: ReturnType<typeof makeApp>, cookie: string) {
@@ -40,6 +40,16 @@ describe("pairing", () => {
     expect((await r.json()).error.code).toBe("rate_limited");
     const other = await t.req("/api/pair", { method: "POST", json: { code: "ZZZZZZZZ" }, headers: { "x-test-ip": "10.9.9.9" } });
     expect(other.status).toBe(404);
+  });
+
+  it("pairs with the server key", async () => {
+    const t = makeApp();
+    const ok = await t.req("/api/pair", { method: "POST", json: { server_key: SECRET, device_name: "P", platform: "ios" } });
+    expect(ok.status).toBe(200);
+    expect((await ok.json()).token).toMatch(/^tkd_/);
+    const wrong = await t.req("/api/pair", { method: "POST", json: { server_key: "not-the-key-0123456789" } });
+    expect(wrong.status).toBe(401);
+    expect((await t.req("/api/pair", { method: "POST", json: { device_name: "P" } })).status).toBe(422);
   });
 
   it("demo pairing code is reusable when configured", async () => {

@@ -4,6 +4,8 @@ Claude Code is the best-tested Tickler client. This works the same in the termin
 
 **Time:** about 3 minutes.
 
+**Fastest:** in the Tickler app, open **AI tools** and paste the one-line command into a terminal on this computer. It sets up Claude Code, the origin hook and the instructions for you. The steps below are the same thing by hand.
+
 ## Step 1: Add the Tickler server
 
 Run this in a terminal:

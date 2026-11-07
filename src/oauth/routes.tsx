@@ -10,12 +10,14 @@
 import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import { logActivity } from "../core/activity";
-import { listPasskeys, SESSION_COOKIE, validSession } from "../core/admin";
+import { getAdmin, listPasskeys, SESSION_COOKIE, validSession } from "../core/admin";
+import { approvalForBrowser, createApproval, useApproval } from "../core/approvals";
 import { sameResource } from "../core/auth";
 import type { Ctx } from "../core/context";
 import { rateLimit } from "../core/rateLimit";
 import { ApiError, randomToken, sha256b64url, sha256hex, timingSafeEqual, uuid } from "../core/util";
 import { clientIp, type C, type Env } from "../routes/http";
+import { raw } from "hono/html";
 import { Flash, Layout } from "../setup/layout";
 import { LoginForm } from "../setup/routes";
 
@@ -279,13 +281,39 @@ oauth.get("/authorize", async (c) => {
   if ("page" in r) return oauthPage(c, "Can't connect", <div class="card"><Flash error={r.page} /></div>);
   if ("redirect" in r) return c.redirect(r.redirect!);
   if (!(await validSession(ctx, getCookie(c, SESSION_COOKIE)))) {
+    // Not signed in here: approve from the paired phone (no passphrase needed), or sign in below.
     const next = c.req.url.slice(new URL(c.req.url).origin.length);
+    const match = String(10 + Math.floor(Math.random() * 90));
+    const { id, secret } = await createApproval(ctx, r.client.id, { auth: { ...r.params }, client_name: r.client.name, match });
+    const poll = `/oauth/approvals/${id}?s=${encodeURIComponent(secret)}`;
     return oauthPage(
       c,
-      "Sign in",
+      "Approve on your phone",
       <>
-        <p class="muted">Sign in to let {r.client.name} use your Tickler.</p>
-        <LoginForm next={next} hasPasskeys={(await listPasskeys(ctx)).length > 0} />
+        <div class="card">
+          <h1>Allow {r.client.name} to use your Tickler?</h1>
+          <p>
+            Open the Tickler app on your phone and tap <b>Allow</b>. It shows the number <b class="code">{match}</b>; check it matches.
+          </p>
+          <div class="row">
+            <a class="btn" href={`tickler://approve/${id}`}>
+              Open the Tickler app
+            </a>
+          </div>
+          <p class="muted" id="approval-status">Waiting for your phone…</p>
+        </div>
+        {(await getAdmin(ctx)) ? (
+          <details>
+            <summary class="muted">Or sign in on this page</summary>
+            <LoginForm next={next} hasPasskeys={(await listPasskeys(ctx)).length > 0} />
+          </details>
+        ) : null}
+        <script>
+          {raw(`(function poll(){fetch(${JSON.stringify(poll)}).then(r=>r.json()).then(j=>{
+if(j.status==='allowed'||j.status==='denied'){location.href=${JSON.stringify(poll.replace("?", "/continue?"))};return}
+if(j.status==='expired'){document.getElementById('approval-status').innerText='This request expired. Start connecting again.';return}
+setTimeout(poll,2000)}).catch(()=>setTimeout(poll,4000))})()`)}
+        </script>
       </>,
     );
   }
@@ -336,13 +364,49 @@ oauth.post("/authorize", async (c) => {
     u.searchParams.set("error", "access_denied");
     return c.redirect(u.toString());
   }
+  await logActivity(ctx, { type: "admin", id: "admin", name: "Admin" }, "oauth_authorize", `Allowed "${r.client.name}"`);
+  u.searchParams.set("code", await issueAuthCode(ctx, p));
+  return c.redirect(u.toString());
+});
+
+async function issueAuthCode(ctx: Ctx, p: AuthParams) {
   const code = randomToken("tka_");
   await ctx.storage.run(
     `INSERT INTO oauth_codes (code_hash, client_id, redirect_uri, code_challenge, scope, resource, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [await sha256hex(code), p.client_id, p.redirect_uri, p.code_challenge, p.scope, p.resource, new Date(ctx.now().getTime() + CODE_TTL_MS).toISOString()],
   );
-  await logActivity(ctx, { type: "admin", id: "admin", name: "Admin" }, "oauth_authorize", `Allowed "${r.client.name}"`);
-  u.searchParams.set("code", code);
+  return code;
+}
+
+// ---------- approval from the phone (see core/approvals.ts)
+
+oauth.get("/approvals/:id", async (c) => {
+  const ctx = c.get("ctx");
+  await rateLimit(ctx, `oauth:${clientIp(c)}`, 120, 60);
+  const a = await approvalForBrowser(ctx, c.req.param("id"), c.req.query("s") ?? "");
+  c.header("cache-control", "no-store");
+  return c.json({ status: a?.status ?? "expired" });
+});
+
+oauth.get("/approvals/:id/continue", async (c) => {
+  const ctx = c.get("ctx");
+  const id = c.req.param("id");
+  const a = await approvalForBrowser(ctx, id, c.req.query("s") ?? "");
+  if (!a || (a.status !== "allowed" && a.status !== "denied")) {
+    return oauthPage(c, "Can't connect", <div class="card"><Flash error="This request expired or was already used. Start connecting again." /></div>);
+  }
+  const p = a.params.auth as unknown as AuthParams;
+  const u = new URL(p.redirect_uri);
+  if (p.state) u.searchParams.set("state", p.state);
+  u.searchParams.set("iss", c.get("baseUrl"));
+  if (a.status === "denied") {
+    u.searchParams.set("error", "access_denied");
+    return c.redirect(u.toString());
+  }
+  if (!(await useApproval(ctx, id))) {
+    return oauthPage(c, "Can't connect", <div class="card"><Flash error="This request was already used. Start connecting again." /></div>);
+  }
+  u.searchParams.set("code", await issueAuthCode(ctx, p));
   return c.redirect(u.toString());
 });
 

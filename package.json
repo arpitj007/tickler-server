@@ -50,7 +50,7 @@
         "description": "SQLite database for your entries, projects and money data."
       },
       "TICKLER_SECRET": {
-        "description": "A long random secret (for example from `openssl rand -base64 32`). It encrypts provider keys, and you enter it once on **/setup** to claim the server. Keep a copy."
+        "description": "Your server key. Paste the one the Tickler app copied for you (or any long random value, for example from `openssl rand -base64 32`). It encrypts provider keys and lets the app pair without a pairing code."
       },
       "TICKLER_SERVER_NAME": {
         "description": "A name for this server, shown in the app (for example **Personal** or **Work**)."

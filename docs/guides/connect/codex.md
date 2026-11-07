@@ -4,6 +4,8 @@ This works for the Codex CLI and the Codex IDE extension, which share the same s
 
 **Time:** about 2 minutes.
 
+**Fastest:** in the Tickler app, open **AI tools** and paste the one-line command into a terminal on this computer. It sets up Codex and its instructions for you. The steps below are the same thing by hand.
+
 ## Step 1: Add Tickler to your Codex config
 
 Open (or create) `~/.codex/config.toml` and add:
@@ -36,7 +38,7 @@ Leave out the token lines entirely and run:
 codex mcp login tickler
 ```
 
-A browser opens on your own server's login page. Log in with your passkey or passphrase and press **Allow**.
+A browser opens on your own server. Tap **Allow** in the Tickler app on your phone (or sign in on the page).
 
 ## Step 2: Check it's connected
 
