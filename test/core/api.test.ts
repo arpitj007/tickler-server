@@ -167,6 +167,32 @@ describe("projects and entries", () => {
     expect((await fresh.json()).status).toBe("planned");
   });
 
+  it("in_progress is an open status: no completed_at, survives snooze, can't reopen a newer done", async () => {
+    const t = makeApp();
+    const s = await setupAll(t);
+    const p = await (await t.req("/api/projects", { method: "POST", token: s.device, json: { name: "P" } })).json();
+    const e = await (await t.req("/api/entries", { method: "POST", token: s.device, json: { project_id: p.id, title: "T", start_at: "2026-11-12T09:00:00Z" } })).json();
+    const started = await (await t.req(`/api/entries/${e.id}`, { method: "PATCH", token: s.device, json: { status: "in_progress" } })).json();
+    expect(started.status).toBe("in_progress");
+    expect(started.completed_at).toBeNull();
+    const snoozed = await (await t.req(`/api/entries/${e.id}/snooze`, { method: "POST", token: s.device, json: { start_at: "2026-11-13T09:00:00Z" } })).json();
+    expect(snoozed.status).toBe("in_progress");
+    const open = await (await t.req("/api/entries?status=in_progress", { token: s.device })).json();
+    expect(open.entries.map((x: any) => x.id)).toEqual([e.id]);
+
+    const loadedAt = snoozed.updated_at;
+    t.advance(60_000);
+    const done = await (await t.req(`/api/entries/${e.id}/complete`, { method: "POST", token: s.device, json: { status: "done" } })).json();
+    expect(done.completed_at).toBeTruthy();
+    t.advance(60_000);
+    const stale = await t.req(`/api/entries/${e.id}/complete`, { method: "POST", token: s.device, json: { status: "in_progress", base_updated_at: loadedAt } });
+    expect(stale.status).toBe(409);
+    const reopened = await (await t.req(`/api/entries/${e.id}/complete`, { method: "POST", token: s.device, json: { status: "in_progress", base_updated_at: done.updated_at } })).json();
+    expect(reopened.status).toBe("in_progress");
+    expect(reopened.completed_at).toBeNull();
+    expect((await t.req(`/api/entries/${e.id}`, { method: "PATCH", token: s.device, json: { status: "started" } })).status).toBe(422);
+  });
+
   it("Idempotency-Key replays the stored response", async () => {
     const t = makeApp();
     const s = await setupAll(t);

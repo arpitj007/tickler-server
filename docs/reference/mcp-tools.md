@@ -9,8 +9,8 @@ Tool results return JSON text plus `structuredContent`.
 | Tool | Input | What it does |
 | --- | --- | --- |
 | `create_entry` | `project`, `title`, `start_at`, `origin`; optional `end_at`, `all_day`, `timezone`, `kind`, `notes`, `importance`, `recurrence`, `links`, `tags`, `external_key`, `source_ref` | Creates an entry, or updates it when `external_key` matches one in the same project. Creates the project if it's new. Returns `{ entry, url, created }`, where `url` is `tickler://entry/<id>`. |
-| `update_entry` | `id`, or `project` + `external_key`; the fields to change; `origin` | Partial update. |
-| `complete_entry` | `id` or key, `status`, `note`, `origin` | Marks an entry done, skipped or cancelled. |
+| `update_entry` | `id`, or `project` + `external_key`; the fields to change, including `status`; `origin` | Partial update. `status: in_progress` marks it started. |
+| `complete_entry` | `id` or key, `status`, `note`, `origin` | Marks an entry done (default), skipped or cancelled; `in_progress` marks it started, `planned` reopens it. |
 | `delete_entry` | `id` or key, `origin` | Soft delete (the entry can be restored from the server). |
 | `list_entries` | `from`, `to`; optional `project`, `status`, `importance`, `query` | Up to 200 entries. Agents use it to check for duplicates before adding. |
 | `list_projects` | | All projects. |
@@ -23,7 +23,7 @@ Tool results return JSON text plus `structuredContent`.
 
 - **Times:** ISO 8601 in UTC, like `2026-11-12T09:00:00Z`. Plus `timezone` (IANA, like `Europe/Berlin`) so the app shows it correctly.
 - **`kind`:** `task`, `event`, `deadline`, `reminder`, `scheduled_run`, `follow_up`, `launch`, `renewal`.
-- **`status`:** `planned`, `done`, `skipped`, `cancelled`.
+- **`status`:** `planned` (not started), `in_progress` (started), `done`, `skipped`, `cancelled`. `planned` and `in_progress` are open: not completed, and they can be overdue.
 - **`importance`:** `normal`, `important`, `critical`.
 - **`recurrence`:** an RFC 5545 RRULE without `DTSTART`, like `FREQ=WEEKLY;BYDAY=MO`.
 - **`links`:** `[{ "title": "PR #42", "url": "https://..." }]`.

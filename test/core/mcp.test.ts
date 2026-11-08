@@ -99,6 +99,11 @@ describe("MCP tools", () => {
     const m = await tool(t, s.mcp, "mark_important", { id, importance: "critical", reason: "launch window", origin });
     expect(m.data.entry.importance).toBe("critical");
     expect(m.data.entry.notes).toContain("launch window");
+    const st = await tool(t, s.mcp, "update_entry", { id, status: "in_progress", origin });
+    expect(st.data.entry.status).toBe("in_progress");
+    expect(st.data.entry.completed_at).toBeNull();
+    const st2 = await tool(t, s.mcp, "complete_entry", { id, status: "in_progress", origin });
+    expect(st2.data.entry.status).toBe("in_progress");
     const c = await tool(t, s.mcp, "complete_entry", { id, note: "shipped", origin });
     expect(c.data.entry.status).toBe("done");
     expect(c.data.entry.completed_at).toBeTruthy();

@@ -85,7 +85,7 @@ approval (10 minutes) and the page waits for the phone, showing the two-digit `m
   "kind": "task|event|deadline|reminder|scheduled_run|follow_up|launch|renewal",
   "start_at": "…Z" | null /* null only for kind=task */, "end_at": "…Z" | null, "all_day": false,
   "timezone": "Europe/Berlin" /* IANA */, "recurrence": "FREQ=WEEKLY;BYDAY=MO" | null /* RRULE, no DTSTART */,
-  "status": "planned|done|skipped|cancelled", "importance": "normal|important|critical",
+  "status": "planned|in_progress|done|skipped|cancelled" /* planned and in_progress are open */, "importance": "normal|important|critical",
   "source": "agent|manual|system", "origin_id": "…" | null, "last_origin_id": "…" | null,
   "origin_flagged": false /* true when the writer sent no origin */,
   "external_key": "…" | null, "links": [{ "title", "url" }], "tags": ["…"], "source_ref": "…" | null,
@@ -153,7 +153,7 @@ GET /api/changes?since=<cursor>&limit=500
 - `metric_snapshots` in a full snapshot are limited to the last 400 days.
 
 Conflict rule (server enforced on `PATCH /api/entries/:id` and `complete`): last write wins,
-except an entry whose status is `done` is never set back to `planned` by a write whose
+except an entry whose status is `done` is never set back to `planned` or `in_progress` by a write whose
 `base_updated_at` is older than the entry's `completed_at`. That write gets `409 conflict` with the
 current entry in `error.current`; the app drops its change and takes the server copy.
 
@@ -169,7 +169,7 @@ current entry in `error.current`; the app drops its change and takes the server 
 | GET | `/api/entries/:id` | | `{ entry, origin, last_origin }` |
 | POST | `/api/entries` | `Entry` fields (`id` optional: the app may create ids offline) | `Entry` |
 | PATCH | `/api/entries/:id` | partial + `base_updated_at` | `Entry` |
-| POST | `/api/entries/:id/complete` | `{ status: done|skipped|cancelled|planned, note?, base_updated_at? }` | `Entry` |
+| POST | `/api/entries/:id/complete` | `{ status: done|skipped|cancelled|planned|in_progress, note?, base_updated_at? }` | `Entry` |
 | POST | `/api/entries/:id/snooze` | `{ start_at }` | `Entry` |
 | DELETE | `/api/entries/:id` | | soft delete, `Entry` |
 | GET | `/api/origins` | `?client&project_id` | `{ origins }` |

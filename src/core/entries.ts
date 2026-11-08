@@ -6,7 +6,9 @@ import { isValidTimeZone, nextLocalMidnight, parseTimeInput, rruleError } from "
 import { ApiError, jsonParse, truncate, uuid } from "./util";
 
 export const KINDS = ["task", "event", "deadline", "reminder", "scheduled_run", "follow_up", "launch", "renewal"] as const;
-export const STATUSES = ["planned", "done", "skipped", "cancelled"] as const;
+/** planned and in_progress are open (not completed, can be overdue); done, skipped and cancelled are closed. */
+export const STATUSES = ["planned", "in_progress", "done", "skipped", "cancelled"] as const;
+export const OPEN_STATUSES: readonly string[] = ["planned", "in_progress"];
 export const IMPORTANCES = ["normal", "important", "critical"] as const;
 export const SOURCES = ["agent", "manual", "system"] as const;
 export type Kind = (typeof KINDS)[number];
@@ -276,11 +278,11 @@ export async function updateEntry(
 }
 
 /**
- * Last write wins, except a done entry is never set back to planned by a write whose
+ * Last write wins, except a done entry is never reopened (planned or in_progress) by a write whose
  * base_updated_at is older than the entry's completed_at (409 conflict with the current entry).
  */
 export function checkConflict(cur: EntryRow, newStatus: string | undefined, base: string | null | undefined) {
-  if (cur.status !== "done" || newStatus !== "planned" || !base || !cur.completed_at) return;
+  if (cur.status !== "done" || !newStatus || !OPEN_STATUSES.includes(newStatus) || !base || !cur.completed_at) return;
   if (Date.parse(base) < Date.parse(cur.completed_at)) {
     throw new ApiError(409, "conflict", "This entry was completed after your copy was loaded.", { current: entryJson(cur) });
   }
@@ -305,7 +307,7 @@ export async function snoozeEntry(ctx: Ctx, id: string, startAt: string, meta: W
   if (!p) invalid({ start_at: "start_at must be ISO 8601." });
   let end: string | null | undefined = undefined;
   if (cur.end_at && cur.start_at) end = new Date(p.at.getTime() + Date.parse(cur.end_at) - Date.parse(cur.start_at)).toISOString();
-  return updateEntry(ctx, id, { start_at: p.at.toISOString(), end_at: end, status: cur.status === "done" ? undefined : "planned" }, meta);
+  return updateEntry(ctx, id, { start_at: p.at.toISOString(), end_at: end, status: cur.status === "done" || cur.status === "in_progress" ? undefined : "planned" }, meta);
 }
 
 export async function deleteEntry(ctx: Ctx, id: string, meta: WriteMeta) {

@@ -169,8 +169,13 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
       title: "Change an entry",
       description:
         "Change an existing entry: reschedule it, rename it, add notes or links. Identify it by id, or by project + external_key. " +
-        "Only the fields you pass change.",
-      inputSchema: { ...ref, ...partial(fields), origin: originInputSchema.optional().describe(ORIGIN_DESC) },
+        "Only the fields you pass change. status in_progress marks it started (still open); to finish it, use complete_entry.",
+      inputSchema: {
+        ...ref,
+        ...partial(fields),
+        status: z.enum(STATUSES).optional().describe("in_progress when you start working on it; planned for not started"),
+        origin: originInputSchema.optional().describe(ORIGIN_DESC),
+      },
       annotations: { destructiveHint: false, idempotentHint: true },
     },
     async (a) => {
@@ -192,7 +197,7 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
       title: "Mark an entry done",
       description:
         "Call when you finish something that has a Tickler entry. status: done (default), skipped or cancelled; " +
-        "planned reopens it. Add a short note on the outcome if useful.",
+        "in_progress marks it started (still open), planned reopens it as not started. Add a short note on the outcome if useful.",
       inputSchema: {
         ...ref,
         status: z.enum(STATUSES).optional().describe("Default done"),
