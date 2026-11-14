@@ -140,8 +140,12 @@ async function fetchMetadataDocument(ctx: Ctx, url: string): Promise<OAuthClient
   try {
     const u = new URL(url);
     if (u.protocol !== "https:" || u.pathname === "/" || u.hash) return null;
-    const res = await ctx.fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(5000), redirect: "error" });
-    if (!res.ok) return null;
+    // Workers throw on redirect: "error"; "manual" makes a redirect a non-ok response, which we refuse.
+    const res = await ctx.fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(5000), redirect: "manual" });
+    if (!res.ok) {
+      console.warn(`client metadata ${url}: HTTP ${res.status}`);
+      return null;
+    }
     const text = await res.text();
     if (text.length > 5 * 1024) return null;
     const doc = JSON.parse(text) as { client_id?: string; client_name?: string; redirect_uris?: string[]; token_endpoint_auth_method?: string };
@@ -154,7 +158,8 @@ async function fetchMetadataDocument(ctx: Ctx, url: string): Promise<OAuthClient
       [url, String(doc.client_name ?? u.hostname).slice(0, 100), JSON.stringify(doc.redirect_uris), text, now],
     );
     return ctx.storage.first<OAuthClientRow>("SELECT * FROM oauth_clients WHERE id = ?", [url]);
-  } catch {
+  } catch (e) {
+    console.warn(`client metadata ${url}: ${(e as Error).message}`);
     return null;
   }
 }
