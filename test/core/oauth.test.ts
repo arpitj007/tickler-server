@@ -163,4 +163,27 @@ describe("OAuth 2.1 for MCP clients", () => {
     const tok = await token(t, { grant_type: "authorization_code", code, code_verifier: verifier, client_id: docUrl });
     expect(tok.status).toBe(200);
   });
+
+  it("client metadata that prefers private_key_jwt but supports none (ChatGPT)", async () => {
+    const docUrl = "https://chatgpt.example/oauth/client.json";
+    const doc = (supported: string[]) => ({
+      client_id: docUrl,
+      client_name: "ChatGPT",
+      redirect_uris: [REDIRECT],
+      token_endpoint_auth_method: "private_key_jwt",
+      token_endpoint_auth_methods_supported: supported,
+    });
+    const fetchDoc = (d: object) => (async () => new Response(JSON.stringify(d))) as unknown as typeof fetch;
+    const strict = makeApp({ fetch: fetchDoc(doc(["private_key_jwt"])) });
+    const { challenge: c1 } = await pkce();
+    expect(await (await strict.req(authorizeUrl(docUrl, c1), { cookie: await claim(strict) })).text()).toContain("Unknown app");
+
+    const t = makeApp({ fetch: fetchDoc(doc(["none", "private_key_jwt"])) });
+    const cookie = await claim(t);
+    const { verifier, challenge } = await pkce();
+    expect(await (await t.req(authorizeUrl(docUrl, challenge), { cookie })).text()).toContain("Allow ChatGPT?");
+    const code = await getCode(t, cookie, docUrl, challenge);
+    const tok = await token(t, { grant_type: "authorization_code", code, code_verifier: verifier, client_id: docUrl });
+    expect(tok.status).toBe(200);
+  });
 });

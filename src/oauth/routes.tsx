@@ -148,9 +148,22 @@ async function fetchMetadataDocument(ctx: Ctx, url: string): Promise<OAuthClient
     }
     const text = await res.text();
     if (text.length > 5 * 1024) return null;
-    const doc = JSON.parse(text) as { client_id?: string; client_name?: string; redirect_uris?: string[]; token_endpoint_auth_method?: string };
-    if (doc.client_id !== url || !Array.isArray(doc.redirect_uris) || !doc.redirect_uris.every(validRedirectUri)) return null;
-    if (doc.token_endpoint_auth_method && doc.token_endpoint_auth_method !== "none") return null;
+    const doc = JSON.parse(text) as {
+      client_id?: string;
+      client_name?: string;
+      redirect_uris?: string[];
+      token_endpoint_auth_method?: string;
+      token_endpoint_auth_methods_supported?: string[];
+    };
+    const refuse = (why: string) => {
+      console.warn(`client metadata ${url}: ${why}`);
+      return null;
+    };
+    if (doc.client_id !== url) return refuse("client_id doesn't match its URL");
+    if (!Array.isArray(doc.redirect_uris) || !doc.redirect_uris.every(validRedirectUri)) return refuse("bad redirect_uris");
+    // Public clients only. ChatGPT prefers private_key_jwt but also lists "none" as supported.
+    const method = doc.token_endpoint_auth_method ?? "none";
+    if (method !== "none" && !doc.token_endpoint_auth_methods_supported?.includes("none")) return refuse(`auth method ${method}`);
     const now = ctx.now().toISOString();
     await ctx.storage.run(
       `INSERT INTO oauth_clients (id, name, redirect_uris, token_endpoint_auth_method, metadata, created_at) VALUES (?, ?, ?, 'none', ?, ?)
