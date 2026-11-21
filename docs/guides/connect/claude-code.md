@@ -1,43 +1,37 @@
 # Connect Claude Code
 
-Claude Code is the best-tested Tickler client. This works the same in the terminal, the desktop app and the IDE extensions.
+Let Claude Code add Tickler entries that link back to the session that made them. About 3 minutes.
 
-**Time:** about 3 minutes.
+## Add the Tickler server
 
-**Fastest:** in the Tickler app, open **AI tools** and paste the one-line command into a terminal on this computer. It sets up Claude Code, the origin hook and the instructions for you. The steps below are the same thing by hand.
-
-## Step 1: Add the Tickler server
-
-Run this in a terminal:
+Run this in a terminal. The token is a key just for this computer; the app fills it in.
 
 ```
 claude mcp add --transport http --scope user tickler {{SERVER_URL}}/mcp --header "Authorization: Bearer {{MCP_TOKEN}}"
 ```
 
-`--scope user` makes Tickler available in every project on this computer.
+**Faster:** paste the one-line command from **AI tools** instead. It does every step here.
 
-The token (it starts with `tkm_`) is a key just for this tool. In the Tickler app it's filled in for you. Otherwise make one on your server's setup page under **AI tools**, then **New token**. Name it after the computer, like "Claude Code on MacBook", so you can revoke it on its own later.
+![The one-line command on the AI tools page](../images/connect-claude-code-1.png)
 
-## Step 2: Check it's connected
+## Check it's connected
 
-```
-claude mcp list
-```
+Run `claude mcp list`. You should see `tickler` with **Connected** next to it.
 
-You should see `tickler` with **Connected** next to it. Inside a Claude Code session, `/mcp` shows the same, plus Tickler's tools.
+![claude mcp list showing tickler connected](../images/connect-claude-code-2.png)
 
-## Step 3: Install the origin hook (recommended)
+## Download the origin hook
 
-The hook lets every entry link back to the exact Claude Code session that created it, with a **resume command** you can copy from your phone. It fills in the session id, folder, git repo and branch, so the model doesn't have to guess.
-
-Download the hook script to your Claude folder:
+The hook links each entry to its exact session, with a resume command you can copy from your phone. It needs Node.js 20 or newer.
 
 ```
 mkdir -p ~/.claude/hooks
 curl -fsSL https://raw.githubusercontent.com/arpitj007/tickler-server/main/hooks/claude-code/tickler-origin.mjs -o ~/.claude/hooks/tickler-origin.mjs
 ```
 
-Then open `~/.claude/settings.json` (create it if it doesn't exist) and add this. If the file already has a `"hooks"` section, add the `PreToolUse` item to it:
+## Turn on the hook
+
+Add this to `~/.claude/settings.json` (create it if needed; if it has `"hooks"`, add just the `PreToolUse` item). Then restart Claude Code.
 
 ```json
 {
@@ -54,27 +48,30 @@ Then open `~/.claude/settings.json` (create it if it doesn't exist) and add this
 }
 ```
 
-The hook only runs for Tickler's tools. It needs Node.js 20 or newer on this computer. It only reads your current folder, git remote, git branch and computer name, and adds them to the Tickler call. It sends nothing anywhere else.
-
-Restart Claude Code after changing settings.
-
-## Step 4: Tell Claude when to use Tickler
+## Tell Claude when to use Tickler
 
 Add the [instruction block](../instruction-block.md) to `~/.claude/CLAUDE.md`. Without it, Claude only uses Tickler when you ask.
 
-## Step 5: Try it
+![The instruction block with its Copy button](../images/instruction-block-1.png)
 
-In any project, ask Claude Code:
+## Try it
+
+Ask Claude Code this. The entry appears in the app, and its origin card offers **Copy resume command**.
 
 ```
 Remind me tomorrow at 10:00 to check the review comments on this branch.
 ```
 
-The entry appears in the app within a few seconds of the next sync. Open it: the origin card at the top shows this session, and **Copy resume command** gives you `cd ... && claude --resume ...`.
+![Entries on the Now screen](../images/app-now.png)
 
-## Claude Code on the web
+## Troubleshooting
 
-Sessions on the web run in the cloud, so they can only reach a server with a public address. Add Tickler to the repo's `.mcp.json` and keep the token out of the file:
+- **No token:** make one in setup under **AI tools**. Name it after the computer, like "Claude Code on MacBook".
+- **"Failed to connect":** open `{{SERVER_URL}}/api/health` in a browser. If it doesn't load, this computer can't reach your server.
+- **"Unauthorized":** the token was revoked or mistyped. Run `claude mcp remove tickler --scope user`, then add it again.
+- **Entries show "unknown origin":** the hook isn't running. Check the path in `settings.json` and that `node --version` works.
+- **What the hook reads:** your folder, git remote, branch and computer name. It sends them only to Tickler.
+- **Claude Code on the web:** add this to the repo's `.mcp.json`, set `TICKLER_TOKEN` in your cloud environment, and commit the hook to `.claude/settings.json`.
 
 ```json
 {
@@ -87,11 +84,3 @@ Sessions on the web run in the cloud, so they can only reach a server with a pub
   }
 }
 ```
-
-Then set `TICKLER_TOKEN` as an environment variable in your cloud environment's settings. The origin hook works there too if you commit it to the repo's `.claude/settings.json`.
-
-## Troubleshooting
-
-- **"Failed to connect":** open `{{SERVER_URL}}/api/health` in a browser. If that doesn't load, the computer can't reach your server.
-- **"Unauthorized":** the token was revoked or mistyped. Remove and add again: `claude mcp remove tickler --scope user`, then step 1.
-- **Entries show "unknown origin":** the hook isn't running. Check the path in `settings.json` and that `node --version` works in a terminal.

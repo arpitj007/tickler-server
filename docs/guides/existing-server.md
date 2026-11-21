@@ -1,31 +1,28 @@
 # I already have a server
 
-Use this if your Tickler server is already running, for example because you set it up on another phone, or someone in your household runs one for you.
+Connect the app to a Tickler server that's already running, for example one a family member set up. Takes about a minute.
 
-**Time:** about 1 minute.
+## Open setup on a computer
 
-## What you need
+Open your server's address with `/setup` at the end, and sign in with your passkey or passphrase.
 
-- The server's address, for example `https://tickler.your-name.workers.dev` or `https://tickler.example.com`
-- Access to its setup page (`/setup`), to create a pairing code
+![The setup overview with the Pair a phone button](images/existing-server-1.png)
 
-## Steps
+## Make a pairing code
 
-1. On a computer, open your server's setup page: add `/setup` to the address.
-2. Log in with your passkey or passphrase.
-3. Press **Pair a phone**. A QR code and an 8 character code appear. They work once, for 10 minutes.
-4. In the app, choose **I already have a server** and scan the QR code, or type the address and the code.
+Press **Pair a phone**. A QR code and an 8 character code appear. They work once, for 10 minutes.
 
-The full steps, with pictures, are in [Pair your phone](pair.md).
+![The pairing QR code and code on the setup page](images/pair-2.png)
 
-## Check the address
+## Scan it with the app
 
-The app checks the address before pairing. If it says it can't reach the server:
+In the app, choose **Scan a pairing code** and point the camera at the screen. Or type the address and the code under **Or type it in**.
 
-- Make sure the address starts with `https://` (or `http://` for a server on your home network).
-- Don't add `/setup` or `/mcp` at the end. Just the address.
-- If the server is on your home network, your phone must be on the same Wi-Fi. To use it from anywhere, give it a public address: see [Cloudflare Tunnel](public-url-cloudflare-tunnel.md) or [Tailscale Funnel](public-url-tailscale-funnel.md).
+![Pair this iPhone: scan the QR code or type it in](images/app-pair.png)
 
-## More than one server
+## Troubleshooting
 
-The app can hold more than one server, for example "Personal" and "Work". Add another one in **Settings**, then **Servers**. Switch between them from the top of the screen. (More than one server is part of Tickler Pro.)
+- **Can't reach the server:** the address starts with `https://` (or `http://` at home), with no `/setup` or `/mcp` at the end.
+- **The server is at home:** join the same Wi-Fi, or give it a public address with [Cloudflare Tunnel](public-url-cloudflare-tunnel.md) or [Tailscale Funnel](public-url-tailscale-funnel.md).
+- **More than one server:** add another in **Settings**, then **Servers** (Tickler Pro).
+- **Code problems:** see [Pair your phone](pair.md).

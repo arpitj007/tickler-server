@@ -1,52 +1,27 @@
 # OpenAI
 
-Shows your OpenAI API spend per day and per line item (model and token type), and tokens per
-model, from the organization Costs and Usage APIs.
+See your OpenAI API spend and tokens per model, from the organization Costs and Usage APIs. About 3 minutes, as an organization owner.
 
-- **Pulled every hour.** Costs are daily buckets; the current day fills in during the day.
+## Create an admin key
 
-## 1. Create an admin key
+1. In [platform.openai.com](https://platform.openai.com), open **Settings**, then **Organization**, then **Admin keys**.
+2. Click **Create new admin key** and name it `Tickler`. If it offers permissions, choose **Read only**.
+3. Copy the key (`sk-admin-...`). It's shown once.
 
-Organization owners can create admin keys.
+## Paste it into Tickler
 
-1. Open [platform.openai.com](https://platform.openai.com) > **Settings > Organization > Admin
-   keys** (`/settings/organization/admin-keys`).
-   ![Step 1: Admin keys](../assets/providers/openai-1.png)
-2. **Create new admin key**, name `Tickler`. If the dialog offers permissions, choose
-   **Restricted** or **Read only** and give read access to usage (verify: OpenAI's API reference
-   documents no scopes for admin keys; some dashboards show a permission choice).
-   ![Step 2: create admin key](../assets/providers/openai-2.png)
-3. Copy the key (starts with `sk-admin-`). It is shown once.
+In **Money**, open **OpenAI**, paste the key, save, and press **Test**. It reads one day of costs.
 
-Admin keys only work on administration endpoints, not for model calls. If yours has full admin
-rights, treat it like a password: Tickler keeps it encrypted on your server and only reads costs
-and usage.
+![The OpenAI form on the setup page](../guides/images/openai-2.png)
 
-## 2. Paste into Tickler
+## Check the numbers
 
-| Field | Value |
-| --- | --- |
-| Admin key | `sk-admin-...` |
+Open the **Money** tab, then **OpenAI**. Your spend appears after the first sync, with the time it was fetched.
 
-Click **Test**: it reads one day of costs.
+![A money provider's detail screen](../guides/images/app-provider.png)
 
 ## Troubleshooting
 
-- **HTTP 401 / 403:** a project or user key was pasted instead of an admin key, or the key was
-  revoked.
-- **Costs look low today:** today's bucket is partial; the forecast uses complete days only.
-
-## Sources
-
-Checked: 2026-11-06 (platform.openai.com returned 403 to automated checks; the same reference
-was read on developers.openai.com)
-
-- https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/usage/methods/costs
-- https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/usage/methods/completions
-- https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/admin_api_keys/methods/create
-- https://developers.openai.com/api/docs/guides/admin-apis.md
-
-## Screenshots needed
-
-- `openai-1.png`: Settings > Organization > Admin keys
-- `openai-2.png`: create admin key dialog
+- **HTTP 401 or 403:** you pasted a project or user key instead of an admin key, or it was revoked.
+- **Costs look low today:** today is still filling in. The forecast uses complete days only.
+- **Full admin key:** treat it like a password. Tickler keeps it encrypted on your server and only reads costs and usage.

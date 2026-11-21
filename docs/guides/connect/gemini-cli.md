@@ -1,48 +1,39 @@
 # Connect Gemini CLI
 
-**Time:** about 2 minutes.
+Let Gemini CLI add Tickler entries for you. About 2 minutes.
 
-**Fastest:** in the Tickler app, open **AI tools** and paste the one-line command into a terminal on this computer. It sets up Gemini CLI and its instructions for you. The steps below are the same thing by hand.
+## Add the Tickler server
 
-## Step 1: Add the Tickler server
-
-Run:
+Run this in a terminal. The token is a key just for Gemini CLI; the app fills it in.
 
 ```
 gemini mcp add --transport http --scope user --header "Authorization: Bearer {{MCP_TOKEN}}" tickler {{SERVER_URL}}/mcp
 ```
 
-The token (it starts with `tkm_`) is a key just for Gemini CLI. In the Tickler app it's filled in for you. Otherwise make one on your server's setup page under **AI tools**, then **New token**.
+![The Gemini CLI command on the AI tools page](../images/connect-gemini-cli-1.png)
 
-### Or edit the settings file
-
-Open `~/.gemini/settings.json` and add the `tickler` part to `"mcpServers"`:
-
-```json
-{
-  "mcpServers": {
-    "tickler": {
-      "httpUrl": "{{SERVER_URL}}/mcp",
-      "headers": {
-        "Authorization": "Bearer {{MCP_TOKEN}}"
-      }
-    }
-  }
-}
-```
-
-Use `httpUrl`, not `url`: `httpUrl` is the modern HTTP connection Tickler speaks.
-
-## Step 2: Check it's connected
+## Check it's connected
 
 Start `gemini` and type `/mcp`. Tickler should be listed as connected, with its tools.
 
-## Step 3: Tell Gemini when to use it
+## Tell Gemini when to use it
 
 Add the [instruction block](../instruction-block.md) to `~/.gemini/GEMINI.md`.
 
-## Step 4: Try it
+![The instruction block with its Copy button](../images/instruction-block-1.png)
+
+## Try it
+
+Ask Gemini this, then look for the entry in the app.
 
 ```
 Add a Tickler entry for tomorrow at 16:00: check the nightly build, project CI.
 ```
+
+![Entries on the Now screen](../images/app-now.png)
+
+## Troubleshooting
+
+- **Faster setup:** paste the one-line command from **AI tools** into a terminal. It sets up Gemini CLI and its instructions.
+- **No token:** make one in setup under **AI tools**.
+- **Prefer the settings file:** in `~/.gemini/settings.json`, add `"tickler": { "httpUrl": "{{SERVER_URL}}/mcp", "headers": { "Authorization": "Bearer {{MCP_TOKEN}}" } }` inside `"mcpServers"`. Use `httpUrl`, not `url`.

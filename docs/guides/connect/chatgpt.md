@@ -1,49 +1,42 @@
 # Connect ChatGPT
 
-ChatGPT can use Tickler through a **custom MCP connector**. OpenAI changes where this lives and who can use it fairly often, so check the current state in ChatGPT's help pages if a menu below looks different.
+Add Tickler to ChatGPT as a custom connector in developer mode, so it can add entries. About 5 minutes.
 
-**Before you start:**
-
-- Your server needs a public HTTPS address. On Cloudflare you have one already. On Docker, set up [Cloudflare Tunnel](../public-url-cloudflare-tunnel.md) or [Tailscale Funnel](../public-url-tailscale-funnel.md).
-- Your ChatGPT plan must allow custom MCP connectors that can **write** (Tickler adds entries, so read-only isn't enough). At the time of writing this is available in **developer mode** on web, for Business, Enterprise and Edu workspaces where an admin has turned it on, and with more limits on some personal plans.
-
-**Time:** about 5 minutes.
-
-## Step 1: Turn on developer mode
+## Turn on developer mode
 
 In ChatGPT on the web, open **Settings**, then **Apps** (or **Connectors**), then **Advanced settings**, and turn on **Developer mode**. In a workspace, an admin may need to allow it first.
 
-## Step 2: Add Tickler
+## Add Tickler
 
 1. In **Settings**, then **Apps**, press **Create** (or **Add custom MCP server**).
-2. Name: `Tickler`
-3. MCP server URL:
+2. Name it `Tickler` and paste this URL.
+3. Choose **OAuth**, accept the notice, and press **Create**.
 
 ```
 {{SERVER_URL}}/mcp
 ```
 
-4. Authentication: **OAuth**.
-5. Accept the notice about custom connectors and press **Create**.
+## Allow it on your phone
 
-## Step 3: Sign in to your own server
+ChatGPT opens a page from your own server with a two-digit number. In the Tickler app, check it matches and tap **Allow**.
 
-ChatGPT opens a page from **your own server** with a two-digit number. In the Tickler app on your phone, check the number matches and tap **Allow**. (Or sign in on that page with your passkey or passphrase, if you set one up.) Your server gives ChatGPT its own key, which you can revoke in setup under **AI tools**, then **Connected apps**.
+![Your server asks you to allow ChatGPT from your phone](../images/connect-chatgpt-3.png)
 
-## Step 4: Use it in a chat
+## Use it in a chat
 
-Start a chat, choose **Developer mode** (or pick Tickler from the tools menu), and ask:
+Start a chat, choose **Developer mode** or pick Tickler from the tools menu, and ask this. ChatGPT asks you to confirm each write.
 
 ```
 Use Tickler to add an entry for next Tuesday at 11:00: follow up with the designer about the icon, project App.
 ```
 
-ChatGPT asks you to confirm each write. That's expected.
+![Entries on the Now screen](../images/app-now.png)
 
-## Step 5 (optional): Add the instruction block
+## Troubleshooting
 
-Paste the [instruction block](../instruction-block.md) into a Project's instructions or into **Customize ChatGPT**.
-
-## Origins from ChatGPT
-
-ChatGPT doesn't tell connectors which chat a request came from. Entries show the chat's topic as their title, and the app offers **Open ChatGPT** with that title copied, so you can find the chat with search.
+- **Needs a public address:** on Docker, set up [Cloudflare Tunnel](../public-url-cloudflare-tunnel.md) or [Tailscale Funnel](../public-url-tailscale-funnel.md) first.
+- **No developer mode or no write access:** your plan must allow custom connectors that can write. Business, Enterprise and Edu workspaces have it when an admin turns it on. Menus change often, so check ChatGPT's help pages.
+- **No phone handy:** sign in on that page with your passkey or passphrase instead.
+- **Add entries without asking:** paste the [instruction block](../instruction-block.md) into a Project's instructions or **Customize ChatGPT**.
+- **Revoke access:** in setup, under **OAuth apps**, press **Revoke**.
+- **Finding the chat later:** entries show the chat's topic, and **Open ChatGPT** copies it for search.

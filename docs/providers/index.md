@@ -1,51 +1,45 @@
 # Money providers
 
-Tickler pulls usage, costs and sales from the services you connect, on your own server. Every
-key stays on your server, encrypted. Use a **read-only, least-privilege** key for each one; the
-guides below say exactly which screens and permissions.
+Connect the services that earn or cost you money, each with a read-only key that stays encrypted on your server. About 5 minutes per provider.
 
-Honest freshness: only store webhooks are near real time. Everything else is a scheduled pull
-with the provider's own delay. Every number in the app shows when it was fetched.
+## Pick a provider
 
-| Provider | Shows | Source | Pull every | Freshness | Webhook | Guide |
-| --- | --- | --- | --- | --- | --- | --- |
-| App Store | Proceeds, units, subs, trials, refunds, renewals | Sales and Trends + Finance reports, Server Notifications V2 | 6 h | Seconds (webhook) / about 1 day | `/hooks/app_store` | [app_store](app_store.md) |
-| Anthropic | Spend and tokens by model | Admin API cost and usage reports | 15 min | About 5 minutes | | [anthropic](anthropic.md) |
-| Cloudflare | Workers, D1, R2, KV usage and estimated cost | GraphQL Analytics API + dated price table | 15 min | Minutes | | [cloudflare](cloudflare.md) |
-| Stripe | Revenue, net, refunds, MRR | Balance transactions, subscriptions, webhooks | 15 min | Seconds (webhook) / 15 min | `/hooks/stripe` | [stripe](stripe.md) |
-| Google Play | Sales, units, subs, refunds, earnings | Play Console reports bucket, RTDN via Pub/Sub | 6 h | Seconds (webhook) / about 1 day | `/hooks/google_play` | [google_play](google_play.md) |
-| Amazon Appstore | Sales, earnings, subs | Reporting API, Real-Time Notifications (SNS) | 6 h | Seconds (webhook) / 1 to 2 days | `/hooks/amazon_appstore` | [amazon_appstore](amazon_appstore.md) |
-| AWS | Cost by service, forecast | Cost Explorer | 6 h | About 1 day | | [aws](aws.md) |
-| Google Cloud | Cost by service, budgets | BigQuery billing export, Budget API | 6 h | Hours to 1 day | | [google_cloud](google_cloud.md) |
-| OpenAI | Spend and tokens | Organization costs and usage API | 1 h | About 1 hour | | [openai](openai.md) |
-| GitHub | Actions, Copilot, storage, seats | Billing usage API | 1 h | About 1 day | | [github](github.md) |
-| Manual | Anything, fixed costs | `POST /api/metrics`, fixed costs in the app | Push | When you send it | | [manual](manual.md) |
+Open the guide for the service you want. Store webhooks arrive in seconds; everything else is pulled on a schedule, with the provider's own delay.
 
-## How the numbers add up
+| Provider | Shows | Updates | Guide |
+| --- | --- | --- | --- |
+| App Store | Proceeds, units, subs, trials, refunds | Seconds (webhook), reports about 1 day | [App Store](app_store.md) |
+| Google Play | Sales, units, subs, refunds, earnings | Seconds (webhook), reports about 1 day | [Google Play](google_play.md) |
+| Amazon Appstore | Sales, earnings, subs | Seconds (webhook), reports 1 to 2 days | [Amazon Appstore](amazon_appstore.md) |
+| Stripe | Revenue, net, refunds, MRR | Seconds (webhook), 15 min | [Stripe](stripe.md) |
+| Anthropic | Spend and tokens by model | 15 min | [Anthropic](anthropic.md) |
+| Cloudflare | Workers, D1, R2, KV usage and estimated cost | 15 min | [Cloudflare](cloudflare.md) |
+| OpenAI | Spend and tokens | 1 h | [OpenAI](openai.md) |
+| GitHub | Actions, Copilot, storage, seats | 1 h, about 1 day behind | [GitHub](github.md) |
+| AWS | Cost by service, forecast | About 1 day | [AWS](aws.md) |
+| Google Cloud | Cost by service, budgets | Hours to 1 day | [Google Cloud](google_cloud.md) |
+| Manual | Anything, fixed costs | When you send it | [Manual](manual.md) |
 
-- **Revenue** is what you are paid where the source reports it (proceeds or net), otherwise the
-  sales amount the source reports (Google Play daily sales are before Google's fee).
-- **Costs** are the provider's own cost numbers. Cloudflare is an estimate from usage and a
-  dated price table.
-- **Fixed costs** count in the month they are charged: monthly ones every month, yearly ones in
-  their renewal month. They appear under "Manual".
-- **Currency:** totals are in your base currency (`TICKLER_CURRENCY`, default USD). Amounts in
-  other currencies are shown separately and left out of totals, with a note, because v1 has no
-  exchange rates.
-- **Forecast:** the provider's own forecast when it has one (AWS; Cloudflare's is usage run rate
-  priced with the table), otherwise month to date plus the average of the last 7 complete days
-  times the days left (UTC). The detail screen shows which method was used.
+![Money sources on the setup page](../guides/images/money-3.png)
 
-## Webhooks need a public URL
+## Create a read-only key
 
-Store webhooks are sent to `https://<your-server>/hooks/<store>`. On Cloudflare Workers the URL
-is public already. On Docker, set up a tunnel first (see the Tunnel guide); the provider card
-says "Needs a public URL" until one works.
+Follow that provider's guide to create a key with the smallest permissions that work.
 
-## Connecting from your computer
+## Paste it and test
 
-Keys that come as files (an App Store `.p8`, a Google service account JSON) are easier to add
-from a computer than to paste on a phone. From a `tickler-server` checkout:
+Paste the key in the app under **Money**, or on your server's setup page under **Money**, and press **Test**.
+
+![A money provider's detail screen](../guides/images/app-provider.png)
+
+## Troubleshooting
+
+- **Webhooks need a public URL:** stores send them to `https://<your-server>/hooks/<store>`. On Docker, set up a tunnel first.
+- **Revenue:** what you're paid where the source reports it, otherwise sales. Google Play daily sales are before Google's fee.
+- **Costs:** the provider's own numbers. Cloudflare is an estimate from usage and a dated price table.
+- **Currency:** totals are in your base currency (`TICKLER_CURRENCY`, default USD). Others are shown separately.
+- **Forecast:** the provider's own when it has one, otherwise month to date plus the last 7 complete days' average times the days left (UTC).
+- **Key files from a computer:** an App Store `.p8` or a Google JSON is easier to add from a `tickler-server` checkout. The command tests the key first, encrypts it with your `TICKLER_SECRET`, and writes it to your D1 database (`--d1 <name>`) or, with `--db /path/to/tickler.sqlite`, to a Docker server. `npm run provider -- test <source> creds.json` only tests.
 
 ```sh
 cat > creds.json <<'JSON'
@@ -54,11 +48,3 @@ JSON
 TICKLER_SECRET=<your server secret> npm run provider -- set app_store creds.json
 rm creds.json
 ```
-
-- The field names are the ones the app shows for that source. A value starting with `@` is read
-  from that file.
-- The command tests the key against the provider first and stops if the test fails.
-- It encrypts the key with your `TICKLER_SECRET`, the same way the server does, and writes it to
-  your Cloudflare D1 database (`--d1 <name>` if yours isn't called `tickler`) or, with
-  `--db /path/to/tickler.sqlite`, to a Docker server's file.
-- `npm run provider -- test <source> creds.json` only runs the test.

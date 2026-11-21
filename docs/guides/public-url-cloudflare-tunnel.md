@@ -1,39 +1,16 @@
 # Public URL with Cloudflare Tunnel
 
-If you run Tickler with Docker at home, a Cloudflare Tunnel gives it a public HTTPS address, without opening any ports on your router. It's free.
+Give your Docker server a free public HTTPS address without opening ports. About 10 minutes, with a domain on Cloudflare.
 
-You need a public address for: the app away from home, the Claude apps and ChatGPT, and store webhooks. You don't need one if you only use Tickler on your own network.
+## Create the tunnel
 
-**Time:** about 10 minutes for a permanent address. 1 minute for a quick test address.
+1. In the Cloudflare dashboard, go to **Networking**, then **Tunnels**, and press **Create Tunnel**. (Some accounts: **Zero Trust**, **Networks**, **Tunnels**.)
+2. Choose **Cloudflared** and name it `tickler`.
+3. Choose **Docker** and copy the token: the long value after `--token`.
 
-## Quick test (no account, temporary)
+## Run the tunnel next to Tickler
 
-To try it right now, run this on the machine that runs Tickler:
-
-```
-docker run --rm --network host cloudflare/cloudflared:latest \
-  tunnel --no-autoupdate --url http://localhost:8787
-```
-
-After a few seconds it prints an address ending in `trycloudflare.com`. That address works until you stop the command.
-
-This is for testing only: the address changes every time, and Cloudflare gives no uptime guarantee for quick tunnels. On a Mac or Windows with Docker Desktop, `--network host` may not work; install `cloudflared` directly instead and run `cloudflared tunnel --url http://localhost:8787`.
-
-## Permanent address (recommended)
-
-You need a free Cloudflare account and a domain that uses Cloudflare for DNS (you can buy one in the Cloudflare dashboard for the usual registry price, or move an existing one).
-
-### Step 1: Create the tunnel
-
-1. In the Cloudflare dashboard, go to **Networking**, then **Tunnels**, and press **Create Tunnel**. (In some accounts this is under **Zero Trust**, then **Networks**, then **Tunnels**.)
-2. Choose **Cloudflared**, name it `tickler`, and save.
-3. Cloudflare shows install commands. Choose **Docker** and copy the **token**: the long value after `--token`.
-
-![Creating a tunnel in the Cloudflare dashboard](images/tunnel-1.png)
-
-### Step 2: Run the tunnel next to Tickler
-
-Add a second service to your `docker-compose.yml`, so the file looks like this:
+Make your `docker-compose.yml` look like this, with your token and your future address. Then run `docker compose up -d`.
 
 ```yaml
 services:
@@ -55,30 +32,30 @@ services:
       - tickler
 ```
 
-Replace `tickler.example.com` with the address you'll pick in step 3. You can remove the `ports` lines from the `tickler` service now: the tunnel reaches it inside Docker, so nothing needs to be open on your machine.
+## Point an address at Tickler
 
-Start both:
-
-```
-docker compose up -d
-```
-
-### Step 3: Point an address at Tickler
-
-1. Back in the dashboard, open the `tickler` tunnel. Its status should be **Healthy**.
-2. Add a route: **Published application** (older dashboards call it **Public hostname**).
+1. In the dashboard, open the `tickler` tunnel. It should say **Healthy**.
+2. Add a **Published application** route (older dashboards: **Public hostname**).
 3. Pick a subdomain, like `tickler`, and your domain.
-4. Set the service to `http://tickler:8787`. (`tickler` is the container's name in the compose file.)
-5. Save.
+4. Set the service to `http://tickler:8787` and save.
 
-### Step 4: Check it
+## Check it
 
-Open your new address with `/api/health` at the end, for example `https://tickler.example.com/api/health`. You should see a short message that includes `"ok": true`.
+Open your new address with `/api/health` at the end, like `https://tickler.example.com/api/health`. You should see `"ok":true`.
 
-Then open `/setup` on the new address. If you set up a passphrase before, you can now add a passkey too.
+![The health check showing ok true](images/public-url-cloudflare-tunnel-4.png)
 
-## Good to know
+## Troubleshooting
 
-- Don't put Cloudflare Access (login screens) in front of Tickler. AI tools and webhooks can't get past them. Tickler checks its own tokens on every request.
-- The tunnel only exposes Tickler, not the rest of your network.
-- Store webhooks (App Store, Google Play, Amazon, Stripe) go to your public address plus `/hooks/` and the store's name. Each provider guide gives the exact address to paste.
+- **Just testing, no domain:** run this. It prints a temporary `trycloudflare.com` address that works until you stop it.
+
+```
+docker run --rm --network host cloudflare/cloudflared:latest \
+  tunnel --no-autoupdate --url http://localhost:8787
+```
+
+- **Mac or Windows:** `--network host` may not work in Docker Desktop. Install `cloudflared` and run `cloudflared tunnel --url http://localhost:8787`.
+- **AI tools or webhooks can't connect:** don't put Cloudflare Access login screens in front of Tickler. Tickler checks its own tokens.
+- **No domain on Cloudflare:** use [Tailscale Funnel](public-url-tailscale-funnel.md) instead.
+- **Want a passkey:** open `/setup` on the new HTTPS address and add one.
+- **Store webhooks:** they go to your address plus `/hooks/` and the store's name. Each provider guide shows the exact address.

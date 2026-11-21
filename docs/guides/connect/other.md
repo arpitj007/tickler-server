@@ -1,21 +1,16 @@
 # Any other MCP client
 
-Tickler is a standard MCP server, so any tool that speaks MCP can use it. Here's everything you need.
+Connect any tool that speaks MCP to Tickler with a URL and a token. About 5 minutes.
 
-## Connection details
+## Make a token
 
-| Setting | Value |
-| --- | --- |
-| URL | `{{SERVER_URL}}/mcp` |
-| Transport | Streamable HTTP (sometimes just called "HTTP") |
-| Auth, option 1 | Header `Authorization: Bearer {{MCP_TOKEN}}` |
-| Auth, option 2 | OAuth 2.1 with PKCE and dynamic client registration, discovered automatically from the URL |
+In setup, open **AI tools**, type a name for the tool and press **Create token**. Copy it; it's shown once. Use one token per tool.
 
-Make a token on your server's setup page under **AI tools**, then **New token**. Use one token per tool, so you can revoke them one at a time.
+![Creating a token on the AI tools page](../images/connect-other-1.png)
 
-## A typical JSON config
+## Add Tickler to your client
 
-Many clients use a file like this:
+Use URL `{{SERVER_URL}}/mcp`, Streamable HTTP, and the header `Authorization: Bearer {{MCP_TOKEN}}`. Many clients take a file like this; some call the fields `serverUrl`, `httpUrl` or `streamable-http`.
 
 ```json
 {
@@ -29,11 +24,30 @@ Many clients use a file like this:
 }
 ```
 
-Some call the URL field `serverUrl` or `httpUrl`, or the type `streamable-http`. Check your client's docs.
+![The connection details on the AI tools page](../images/connect-other-2.png)
 
-## Clients that only run local (stdio) servers
+## Check it
 
-Use the `mcp-remote` bridge, which runs locally and forwards to Tickler. It needs Node.js:
+This should return a list of Tickler's tools:
+
+```
+curl -s {{SERVER_URL}}/mcp \
+  -H "Authorization: Bearer {{MCP_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+## Tell it when to use Tickler
+
+Paste the [instruction block](../instruction-block.md) wherever your client keeps its system prompt or rules.
+
+![The instruction block with its Copy button](../images/instruction-block-1.png)
+
+## Troubleshooting
+
+- **OAuth instead of a token:** Tickler supports OAuth 2.1 with PKCE and dynamic client registration, discovered from the URL.
+- **Client only runs local (stdio) servers:** use the `mcp-remote` bridge. It needs Node.js.
 
 ```json
 {
@@ -49,13 +63,7 @@ Use the `mcp-remote` bridge, which runs locally and forwards to Tickler. It need
 }
 ```
 
-## Tell it when to use Tickler
-
-Paste the [instruction block](../instruction-block.md) wherever your client keeps its system prompt or rules.
-
-## Set the origin
-
-Ask your agent (or your wrapper script) to send an `origin` object with each write, so entries link back to where they came from:
+- **Entries say "unknown origin":** have your agent send an `origin` object with each write, so entries link back:
 
 ```json
 {
@@ -64,18 +72,4 @@ Ask your agent (or your wrapper script) to send an `origin` object with each wri
   "title": "Short description of the conversation",
   "open_url": "a link that reopens it, if there is one"
 }
-```
-
-If nothing is sent, Tickler still saves the entry and marks its origin as unknown.
-
-## Testing by hand
-
-You can check the connection with `curl`. This should return a list of Tickler's tools:
-
-```
-curl -s {{SERVER_URL}}/mcp \
-  -H "Authorization: Bearer {{MCP_TOKEN}}" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```

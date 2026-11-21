@@ -1,31 +1,32 @@
 # T3 Code and other orchestrators
 
-Tools like T3 Code run other agents for you (Claude Code, Codex and others) in threads. Tickler works with them in two parts: connect the agents underneath, and pass the thread id so entries link back to the right thread.
+Make entries from T3 Code, and similar tools that run agents in threads, link back to the right thread. About 5 minutes.
 
-## Step 1: Connect the agents it runs
+## Connect the agents it runs
 
-T3 Code uses each agent's own MCP settings. So connect Tickler to each agent you run through it:
+T3 Code uses each agent's own MCP settings. Connect Tickler to each agent you run through it, then restart the orchestrator:
 
 - [Claude Code](claude-code.md)
 - [Codex](codex.md)
 - [Cursor](cursor.md)
 
-Then restart the orchestrator so it picks up the change.
+![Connect an AI tool](../images/app-connect.png)
 
-## Step 2: Link entries to threads
+## Link entries to threads
 
-Add this line under the [instruction block](../instruction-block.md) in the agent's instructions file:
+Add this line under the [instruction block](../instruction-block.md) in the agent's instructions file. Then **Open chat** on an entry opens the T3 thread.
 
 ```
 When you run inside T3 Code, set origin.client to "t3_code", origin.session_id to the T3 thread id and origin.open_url to "t3-thread://v1/" followed by the thread id.
 ```
 
-With that, the **Open chat** button on an entry's origin card opens the T3 thread on your computer.
+## Open a thread from an entry
 
-## Scheduled runs
+In the app, open an entry an agent made inside T3 Code and tap **Open chat**. The thread opens in T3 Code on your computer.
 
-If your orchestrator runs scheduled tasks (routines, cron jobs), set `origin.client` to `scheduled_task`, `origin.session_id` to the task id and `origin.parent_session_id` to the thread or session that set it up. Then the app can show the chain: the run, and the chat that scheduled it.
+![Entries on the Now screen](../images/app-now.png)
 
-## Subagents
+## Troubleshooting
 
-When an agent starts a subagent, the subagent should pass its parent's session id as `origin.parent_session_id`. The origin card then has **Show parent**.
+- **Scheduled runs:** set `origin.client` to `scheduled_task`, `origin.session_id` to the task id and `origin.parent_session_id` to the thread that set it up. The app then shows the run and the chat that scheduled it.
+- **Subagents:** pass the parent's session id as `origin.parent_session_id`. The origin card then has **Show parent**.

@@ -1,14 +1,10 @@
 # Connect Codex
 
-This works for the Codex CLI and the Codex IDE extension, which share the same settings file.
+Let the Codex CLI and IDE extension add Tickler entries for you. About 2 minutes.
 
-**Time:** about 2 minutes.
+## Add Tickler to your Codex config
 
-**Fastest:** in the Tickler app, open **AI tools** and paste the one-line command into a terminal on this computer. It sets up Codex and its instructions for you. The steps below are the same thing by hand.
-
-## Step 1: Add Tickler to your Codex config
-
-Open (or create) `~/.codex/config.toml` and add:
+Add this to `~/.codex/config.toml` (create it if needed). The token is a key just for Codex; the app fills it in.
 
 ```toml
 [mcp_servers.tickler]
@@ -16,48 +12,33 @@ url = "{{SERVER_URL}}/mcp"
 http_headers = { "Authorization" = "Bearer {{MCP_TOKEN}}" }
 ```
 
-The token (it starts with `tkm_`) is a key just for Codex. In the Tickler app it's filled in for you. Otherwise make one on your server's setup page under **AI tools**, then **New token**.
+**Faster:** paste the one-line command from **AI tools** instead. It sets up Codex and its instructions.
 
-### Keep the token out of the file (optional)
+![The one-line command on the AI tools page](../images/connect-claude-code-1.png)
 
-Use an environment variable instead:
+## Check it's connected
 
-```toml
-[mcp_servers.tickler]
-url = "{{SERVER_URL}}/mcp"
-bearer_token_env_var = "TICKLER_TOKEN"
-```
+Run `codex mcp list`. Tickler should be listed. In a Codex session, `/mcp` shows its tools.
 
-Then add `export TICKLER_TOKEN="{{MCP_TOKEN}}"` to your shell profile (`~/.zshrc` or `~/.bashrc`) and open a new terminal.
+## Tell Codex when to use it
 
-### Or sign in with OAuth
+Add the [instruction block](../instruction-block.md) to `~/.codex/AGENTS.md` for every project, or to `AGENTS.md` in one project.
 
-Leave out the token lines entirely and run:
+![The instruction block with its Copy button](../images/instruction-block-1.png)
 
-```
-codex mcp login tickler
-```
+## Try it
 
-A browser opens on your own server. Tap **Allow** in the Tickler app on your phone (or sign in on the page).
-
-## Step 2: Check it's connected
-
-```
-codex mcp list
-```
-
-Tickler should be listed. In a Codex session, `/mcp` shows its tools.
-
-## Step 3: Tell Codex when to use it
-
-Add the [instruction block](../instruction-block.md) to `~/.codex/AGENTS.md` (every project) or to `AGENTS.md` in one project.
-
-## Step 4: Try it
+Run this, then look for the entry in the app.
 
 ```
 codex "Add a Tickler entry for the 1st of next month at 09:00: renew the staging certificate, project Infra, important."
 ```
 
-## Origins from Codex
+![Entries on the Now screen](../images/app-now.png)
 
-The instruction block asks Codex to include its session id. To resume a session from an entry, copy the id from the origin card and run `codex resume` with it.
+## Troubleshooting
+
+- **No token:** make one in setup under **AI tools**.
+- **Keep the token out of the file:** use `bearer_token_env_var = "TICKLER_TOKEN"` instead of `http_headers`, add `export TICKLER_TOKEN="{{MCP_TOKEN}}"` to `~/.zshrc` or `~/.bashrc`, and open a new terminal.
+- **Sign in with OAuth instead:** leave out the token line and run `codex mcp login tickler`. Tap **Allow** in the Tickler app.
+- **Resume a session:** copy the session id from the entry's origin card and run `codex resume` with it.

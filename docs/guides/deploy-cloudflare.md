@@ -1,85 +1,44 @@
 # Deploy on Cloudflare
 
-This is the recommended way to run your Tickler server. It runs in your own Cloudflare account, on the free plan, and there is no machine for you to look after. You get a public HTTPS address right away, so every AI tool and every store webhook can reach it.
+Get your own Tickler server on Cloudflare's free plan, with a public HTTPS address, in about 5 minutes.
 
-**Time:** about 5 minutes, most of it waiting for the first build.
+## Start in the app
 
-**Using the app?** Tap **Get started**, then **Deploy to Cloudflare**. The app makes your server key and copies it. Paste it when Cloudflare asks for `TICKLER_SECRET`, press **Create and deploy**, then paste your server's address back into the app. That's all; you can skip step 4 below.
+1. In the Tickler app, tap **Get started**, then **Deploy to Cloudflare**.
+2. The app makes your server key, copies it, and opens Cloudflare.
 
-**You need:** a free Cloudflare account and a free GitHub (or GitLab) account. You can create both during the steps below.
+No app? Open [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/arpitj007/tickler-server) on a computer and make a key with `openssl rand -base64 32`.
 
-## What you will end up with
+![Get started: choose where your server runs](images/app-hosting.png)
 
-- A Cloudflare Worker called `tickler` with an address like `https://tickler.your-name.workers.dev`
-- A D1 database (Cloudflare's hosted SQLite) that holds your entries, only in your account
-- A copy of the Tickler server code in your own GitHub account, so you control updates
+## Fill in the Cloudflare form
 
-Nobody else, including the people who make Tickler, can see any of it.
+1. Log in to Cloudflare, or create a free account.
+2. Connect GitHub or GitLab. Cloudflare copies the Tickler code there, so you get updates.
+3. Keep the suggested names, `tickler` and `tickler-db`.
+4. Paste your server key into `TICKLER_SECRET`. Save a copy in your password manager.
 
-## Step 1: Press the Deploy button
+## Create and deploy
 
-Open this link on a computer (a phone works too, but the screens are small):
-
-[Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/arpitj007/tickler-server)
-
-![The Deploy to Cloudflare page](images/deploy-cloudflare-1.png)
-
-Log in to Cloudflare, or create a free account if you don't have one.
-
-## Step 2: Connect GitHub and name things
-
-1. When asked, connect your GitHub or GitLab account. Cloudflare makes a copy of the Tickler code there. This is how you get updates later.
-2. Keep the suggested names (`tickler` for the Worker and `tickler-db` for the database) unless you want different ones.
-3. You will be asked for one secret, `TICKLER_SECRET`: your server key. It encrypts the provider keys you may add later. If you started from the app, paste the key it copied. Otherwise paste a long random value. Any password manager can make one, or run this in a terminal:
-
-```
-openssl rand -base64 32
-```
-
-Keep a copy of it in your password manager. If you ever lose it, Tickler keeps working, but you will need to paste your provider keys again.
-
-## Step 3: Create and deploy
-
-Press **Create and deploy**. Cloudflare builds the server and creates the database. The first build takes 2 to 3 minutes.
-
-![The build finishing in the Cloudflare dashboard](images/deploy-cloudflare-2.png)
-
-When it finishes, you see your Worker's address. It looks like this:
+Press **Create and deploy**. The first build takes 2 to 3 minutes. When it finishes, copy your Worker's address:
 
 ```
 https://tickler.your-name.workers.dev
 ```
 
-## Step 4: Open the setup page
+## Connect the app
 
-Add `/setup` to the address and open it in your browser:
+Paste the address into the app and tap **Connect**. That's it.
 
-```
-https://tickler.your-name.workers.dev/setup
-```
+On a computer instead? Open the address with `/setup` at the end, enter your server key, choose a passphrase and press **Create admin**.
 
-The first time, the setup page asks you to protect your server:
+![The setup page asks for your server key and a passphrase](images/deploy-cloudflare-4.png)
 
-1. Create a **passkey** (recommended: it uses Face ID, Touch ID or your device PIN), or set a long **passphrase**.
-2. Give your server a name, like "Personal". The app shows this name.
+## Troubleshooting
 
-That's it. Your server is running.
-
-## Next
-
-- [Pair your phone](pair.md)
-- [Connect your AI tools](connect/claude-code.md)
-
-## Updating later
-
-Your copy of the code lives in your GitHub account. To update:
-
-1. Open your copy on GitHub.
-2. Press **Sync fork** (or merge the latest changes from `arpitj007/tickler-server`).
-3. Cloudflare rebuilds and deploys automatically. Your data stays where it is.
-
-## If something goes wrong
-
-- **The build failed:** open the Worker in the Cloudflare dashboard, then **Deployments**, and read the build log. Press **Retry build** once; most first-time failures are a temporary GitHub connection issue.
-- **The setup page says "not found":** check that you added `/setup` and that the build finished.
-- **You forgot your passphrase:** see "Locked out of setup" in the troubleshooting guide on the docs site.
+- **The build failed:** in the Cloudflare dashboard, open the Worker, then **Deployments**. Read the log and press **Retry build**.
+- **Setup says "not found":** check that you added `/setup` and that the build finished.
+- **Lost your server key:** Tickler keeps working, but you need to paste your provider keys again.
+- **Forgot your passphrase:** you can reset the admin login and keep your entries. See "Reset the admin login" in the server's README on GitHub.
+- **Updating later:** open your copy on GitHub and press **Sync fork**. Cloudflare redeploys and your data stays.
+- **Next:** [pair your phone](pair.md) and [connect your AI tools](connect/claude-code.md).

@@ -1,23 +1,16 @@
 # Manual numbers and fixed costs
 
-For anything Tickler has no adapter for: a hosting bill, ad spend, sponsorships, a number from a
-script. No remote calls and nothing to configure; it is always connected.
+Track costs Tickler has no connection for, like hosting bills or domains, by typing them in or sending them from a script. About 2 minutes.
 
-## Fixed costs
+## Add a fixed cost
 
-Add recurring costs (developer program fees, domains, hosting) in the app under **Money > Fixed
-costs** with amount, currency, interval (monthly or yearly) and the next renewal date.
+In the app, open **Money**, then **Fixed costs**. Enter the amount, currency, monthly or yearly, and the next renewal date. Tickler adds an Important entry 14 days before each renewal.
 
-- They count in the month they are charged: monthly ones every month, yearly ones in their
-  renewal month. Month to date includes a charge once its day has come; the forecast includes
-  every charge in the month.
-- 14 days before each renewal Tickler adds an Important entry in the "Money" project
-  ("Renewal: ..."), on the renewal day. Re-running never duplicates it.
-- Fixed costs in another currency are shown with a note and left out of totals.
+![The Money tab](../guides/images/app-money.png)
 
-## Push a number: `POST /api/metrics`
+## Push a number from a script
 
-Use a device token or an MCP token (`tkm_...`, create one under Settings > AI tools or on `/setup`).
+Send a value with an MCP token (`tkm_...`) from setup under **AI tools**. Sending the same value again replaces it.
 
 ```sh
 curl -X POST https://<your-server>/api/metrics \
@@ -25,6 +18,18 @@ curl -X POST https://<your-server>/api/metrics \
   -H "Content-Type: application/json" \
   -d '{"provider":"manual","metric":"cost","unit":"USD","value":12.5,"period_start":"2026-11-05","label":"Hetzner"}'
 ```
+
+![The server's reply to a metric](../guides/images/manual-2.png)
+
+## See it in Money
+
+Open the **Money** tab, then **Manual**. Your value appears under its label, and counts in this month's totals.
+
+![A money provider's detail screen](../guides/images/app-provider.png)
+
+## Troubleshooting
+
+- **Fields you can send:**
 
 | Field | Required | Meaning |
 | --- | --- | --- |
@@ -37,12 +42,6 @@ curl -X POST https://<your-server>/api/metrics \
 | `account` | no | defaults to `default` |
 | `label` | no | a breakdown line; leave empty for a day's total |
 
-Sending the same provider, account, metric, label and period again replaces the value, so a
-script can re-send safely. For totals, send one value per day with no label; labeled values only
-appear as breakdown lines.
-
-Freshness: whenever you send it.
-
-## Sources
-
-Checked: 2026-11-06 (Tickler's own API: `docs/reference/api-contract.md`)
+- **Totals look wrong:** send one value per day with no label. Labeled values only appear as breakdown lines.
+- **When fixed costs count:** monthly ones every month, yearly ones in their renewal month.
+- **Other currencies:** shown with a note and left out of totals.

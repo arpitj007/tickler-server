@@ -1,52 +1,45 @@
 # Connect the Claude apps
 
-Add Tickler as a **custom connector** in Claude on the web, desktop or mobile. Claude connects from the cloud, so your server needs a public HTTPS address. On Cloudflare you have one already. On Docker, set up [Cloudflare Tunnel](../public-url-cloudflare-tunnel.md) or [Tailscale Funnel](../public-url-tailscale-funnel.md) first.
+Add Tickler as a custom connector in Claude on the web, desktop or phone. About 3 minutes.
 
-**Time:** about 3 minutes.
+## Add the connector
 
-**Plans:** custom connectors work on Pro, Max, Team and Enterprise. The Free plan allows one custom connector. On Team and Enterprise, an owner adds the connector for the organization first.
-
-## Step 1: Add the connector
-
-1. Open Claude on the web (claude.ai) or the desktop app.
-2. Go to **Customize**, then **Connectors**.
-3. Press **+** (Add), then **Add custom connector**.
-4. Name: `Tickler`
-5. Remote MCP server URL:
+1. In Claude on the web or desktop, go to **Customize**, then **Connectors**.
+2. Press **+**, then **Add custom connector**.
+3. Name it `Tickler`, paste this URL, leave the OAuth settings empty, and press **Add**.
 
 ```
 {{SERVER_URL}}/mcp
 ```
 
-6. Leave the advanced OAuth settings empty. Your server registers Claude automatically.
-7. Press **Add**.
+## Allow it on your phone
 
-![Adding a custom connector in Claude](../images/connect-claude-apps-1.png)
+Press **Connect** next to Tickler. A page from your own server shows a two-digit number. In the Tickler app, check the number matches and tap **Allow**.
 
-## Step 2: Sign in to your own server
+![Your server asks you to allow Claude from your phone](../images/connect-claude-apps-2.png)
 
-Press **Connect** next to Tickler. A page from **your own server** opens and shows a two-digit number. Open the Tickler app on your phone: it asks "Allow Claude to use Tickler?" with the same number. Tap **Allow**, and Claude finishes connecting. (If you set up a passphrase or passkey on the server, you can sign in on that page instead.)
+## Turn it on in a chat
 
-Claude never sees your passphrase. Your server gives Claude its own key, which you can revoke any time in setup under **AI tools**, then **Connected apps**.
-
-## Step 3: Turn it on in a chat
-
-In a chat, open the tools menu (the **+** or sliders button) and make sure **Tickler** is on. Then try:
+In a chat, open the tools menu (the **+** or sliders button), make sure **Tickler** is on, and try:
 
 ```
 Add a Tickler entry for Friday at 15:00 in project Website: send the launch checklist to Sam.
 ```
 
-## Step 4 (optional): Add the instruction block
+![Entries on the Now screen](../images/app-now.png)
+
+## Add the instruction block
 
 To have Claude add entries without being asked, paste the [instruction block](../instruction-block.md) into a Project's instructions, or into your personal preferences in Settings.
 
-## Origins from the Claude apps
-
-Claude's apps don't tell connectors which chat a request came from. So entries made from the Claude apps show the chat's topic as their origin title, and the app offers **Open Claude** with that title copied, so you can paste it into Claude's search.
+![The instruction block with its Copy button](../images/instruction-block-1.png)
 
 ## Troubleshooting
 
-- **"Couldn't connect" when adding:** the address must be public HTTPS and end in `/mcp`. Check `{{SERVER_URL}}/api/health` loads from your phone's mobile data (not your Wi-Fi).
-- **The login page doesn't open:** allow pop-ups for claude.ai, then press Connect again.
-- **It worked, then stopped:** the access may have been revoked in setup. Remove the connector and add it again.
+- **Needs a public address:** Claude connects from the cloud. On Docker, set up [Cloudflare Tunnel](../public-url-cloudflare-tunnel.md) or [Tailscale Funnel](../public-url-tailscale-funnel.md) first.
+- **Plans:** custom connectors work on Pro, Max, Team and Enterprise. Free allows one. On Team and Enterprise, an owner adds it first.
+- **"Couldn't connect":** the address must be public HTTPS and end in `/mcp`. Check `{{SERVER_URL}}/api/health` loads on your phone's mobile data.
+- **The login page doesn't open:** allow pop-ups for claude.ai, then press **Connect** again.
+- **No phone handy:** sign in on that page with your passkey or passphrase instead.
+- **It stopped working:** access may have been revoked in setup. Remove the connector and add it again.
+- **Finding the chat later:** entries show the chat's topic, and **Open Claude** copies it for Claude's search.
