@@ -3,6 +3,7 @@ import { Hono, type Context } from "hono";
 import { authenticate, bearer } from "./core/auth";
 import { configFromEnv, type Config, type Ctx } from "./core/context";
 import { recordMcpCall } from "./core/devices";
+import { purgeDispatches } from "./core/dispatch";
 import { runDaily, runDueSyncs } from "./core/moneyService";
 import { providers as defaultProviders, webhookHandlers as defaultHooks } from "./core/providerRegistry";
 import { rateLimit } from "./core/rateLimit";
@@ -152,7 +153,10 @@ export function createApp(deps: AppDeps) {
     /** Cron entry points: "tick" every 15 minutes, "daily" at 06:00 UTC. */
     async scheduled(kind: "tick" | "daily") {
       await ensureMigrated();
-      if (kind === "daily") return runDaily(ctx);
+      if (kind === "daily") {
+        await purgeDispatches(ctx);
+        return runDaily(ctx);
+      }
       return runDueSyncs(ctx);
     },
   };

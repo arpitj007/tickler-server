@@ -1,0 +1,24 @@
+{
+  "name": "tickler",
+  "version": "0.1.0",
+  "description": "Tickler command line: `tickler bridge` runs prompts from the Tickler app in your AI agents' sessions on this computer.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "bin": {
+    "tickler": "bin/tickler.mjs"
+  },
+  "files": [
+    "bin/tickler.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arpitj007/tickler-server.git",
+    "directory": "packages/tickler"
+  },
+  "homepage": "https://github.com/arpitj007/tickler-server/tree/main/packages/tickler",
+  "keywords": ["tickler", "mcp", "claude-code", "codex", "t3-code", "agents"]
+}

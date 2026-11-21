@@ -25,7 +25,7 @@ export interface Ctx {
   writeGuard?: () => Promise<void>;
 }
 
-export type ActorType = "device" | "mcp_token" | "oauth_client" | "admin" | "system";
+export type ActorType = "device" | "mcp_token" | "oauth_client" | "bridge" | "admin" | "system";
 export interface Actor {
   type: ActorType;
   id: string | null;

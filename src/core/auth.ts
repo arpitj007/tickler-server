@@ -44,6 +44,12 @@ export async function authenticate(ctx: Ctx, token: string | null, resource?: st
     if (stale(d.last_seen_at, now)) await ctx.storage.run("UPDATE devices SET last_seen_at = ? WHERE id = ?", [now.toISOString(), d.id]);
     return { actor: { type: "device", id: d.id, name: d.name }, device: d, scopes: ["api", "mcp"] };
   }
+  if (token.startsWith("tkb_")) {
+    // A bridge only reaches /api/bridge/* and POST /api/dispatches/:id/result (see routes/api.ts).
+    const b = await ctx.storage.first<{ id: string; machine: string; name: string | null }>("SELECT id, machine, name FROM bridges WHERE token_hash = ?", [hash]);
+    if (!b) return null;
+    return { actor: { type: "bridge", id: b.id, name: b.name || b.machine }, scopes: ["bridge"] };
+  }
   if (token.startsWith("tkm_")) {
     const t = await ctx.storage.first<McpTokenRow>("SELECT * FROM mcp_tokens WHERE token_hash = ?", [hash]);
     if (!t) return null;

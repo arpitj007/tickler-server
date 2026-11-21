@@ -24,7 +24,8 @@ Product spec: `/Users/aj/dev/tickler-prompt.md` (the app repo is `tickler-app`, 
 
 | Caller | Header | Token prefix | Scope |
 | --- | --- | --- | --- |
-| Paired phone | `Authorization: Bearer tkd_<43 base64url chars>` | `tkd_` | all of `/api/*` |
+| Paired phone | `Authorization: Bearer tkd_<43 base64url chars>` | `tkd_` | all of `/api/*` except the bridge routes |
+| `tickler bridge` | `Authorization: Bearer tkb_<...>` | `tkb_` | only `/api/bridge/heartbeat`, `/api/bridge/next`, `POST /api/dispatches/:id/result` (see [Run in agent](#run-in-agent)) |
 | MCP client | `Authorization: Bearer tkm_<...>` | `tkm_` | `/mcp`, `POST /api/metrics` |
 | OAuth MCP client | `Authorization: Bearer <access token from /oauth/token>` | `tko_` | `/mcp` |
 | Admin (browser) | session cookie `tickler_session` set by `/setup` login | n/a | `/setup/*` |
@@ -236,6 +237,159 @@ Money summary:
 Currency: v1 reports everything in the user's base currency (`TICKLER_CURRENCY`, default USD);
 providers in another currency are converted only if the provider gives a converted amount,
 otherwise shown separately and excluded from totals with a note.
+
+## Run in agent
+
+Lets the phone hand a prompt straight to an agent session instead of copying it ("Build with AI",
+"Send to chat"). Phones can't type into another app's chat, but the computer the agent runs on can:
+each harness has a CLI that resumes a session with a message. So the phone queues a **dispatch**,
+and a **bridge** on that computer claims it and runs the harness's CLI.
+
+```
+iPhone ──POST /api/dispatches──▶ Tickler server ◀──long poll── tickler bridge (Mac/Linux)
+                                                                 │ t3 thread send / claude -p --resume / codex exec resume …
+                                                                 ▼
+                                                            the agent session
+```
+
+### Rules
+
+- **Only paired phones create dispatches.** MCP, OAuth and bridge tokens can't: an agent must never
+  be able to queue work into another agent's session, which is how a prompt injection would spread.
+  There is no MCP tool for it.
+- **The bridge runs messages, never commands.** The runner table is built into the bridge; the
+  server only sends the message, the client and the session or folder.
+- The message goes to the CLI on **stdin**, never in argv (no shell quoting, no length limit,
+  nothing in `ps`). The bridge never adds permission-skipping flags (`--dangerously-skip-permissions`,
+  `--yolo`, `--force`, …): the session's own settings decide what the agent may do.
+- The bridge runs only in folders under its `roots` (default: the home folder).
+- A dispatch no bridge claims within **10 minutes** expires, so a tap doesn't run hours later when
+  a laptop wakes. A claim with no result for 10 minutes goes back to the queue once, then `failed`.
+- Rate limit: **30 dispatches per hour per phone**. Dispatches are deleted after **30 days**.
+- Message: 1 to 16,000 characters.
+- Machines match ignoring case and anything after the first dot (`Mac.lan` = `mac.local` = `Mac`):
+  hostnames change suffix with the network. The Claude Code hook records `os.hostname()`, and the
+  bridge reports the same value as `machine`.
+
+### Runners (built into the bridge)
+
+| client | resume a session | start a new one in `cwd` | checked |
+|---|---|---|---|
+| `t3_code` | `t3 thread send --json <session_id> -` | `t3 thread start --json <cwd> -` | t3 0.1.3, `--help` |
+| `claude_code` | `claude -p --resume <session_id> --output-format json`, in `cwd` | `claude -p --output-format json`, in `cwd` | Claude Code 2.1.308, run |
+| `codex` | `codex exec --json resume <session_id> -` | `codex exec --json -C <cwd> -` | codex-cli 0.171.0, `--help` |
+| `gemini_cli` | not supported (`--resume` takes "latest" or a list index, not an id) | `gemini --output-format json --prompt ""`, opt in | gemini 0.70.0, `--help` |
+| `cursor` | not yet: its CLI takes the prompt as an argument and the docs don't say it reads stdin | | docs |
+| `claude_app`, `chatgpt`, `claude_code_web`, `scheduled_task`, `other` | none | none | the app copies instead |
+
+- T3: `session_id` is the thread id; when the origin has none, the server takes it from `open_url`
+  (`t3-thread://v1/<thread>`). T3 queues the message as the thread's next turn and never interrupts
+  it, so `sent` is final.
+- Claude Code, Codex and Gemini run headless in a new process on the same session. The bridge
+  reports `running`, waits for the process to exit (default limit 60 minutes), and reports `done` or
+  `failed` with the end of the reply. Claude Code finds a session only from the folder it ran in, so
+  resuming needs the origin's `cwd`. When Claude Code denied a tool for lack of permission, the
+  result is `needs_input`.
+- A runner is offered only when its CLI is found on `PATH` (plus `~/.t3/bin`, `~/.local/bin`,
+  `/opt/homebrew/bin`, `/usr/local/bin`) or set in the bridge config, and isn't turned off there.
+
+### The bridge
+
+`npx tickler bridge install --server <url> --code <code>` (npm package `tickler`, source in
+`packages/tickler/`) pairs the computer, copies itself to `~/.tickler/bridge/tickler.mjs` and keeps
+running with launchd (`~/Library/LaunchAgents/com.gettickler.bridge.plist`) or a systemd user unit
+(`~/.config/systemd/user/tickler-bridge.service`). Without `--server` and `--code` it asks for them.
+It sends a heartbeat every 30 s and long-polls for work, running up to 3 dispatches at once.
+Other commands: `tickler bridge` (foreground), `status`, `map <project-id> [--cwd .] [--client …]`,
+`unmap <project-id>`, `uninstall`.
+
+Config `~/.tickler/bridge.json` (mode 600):
+
+```json
+{ "server": "https://tickler.example.com", "token": "tkb_…", "bridge_id": "…",
+  "roots": ["/Users/aj"],
+  "runners": { "codex": { "enabled": false }, "claude_code": { "path": "/opt/homebrew/bin/claude" }, "gemini_cli": { "enabled": true } },
+  "projects": [{ "project_id": "b28b…", "cwd": "/Users/aj/dev/tickler-app", "client": "t3_code" }],
+  "timeout_minutes": 60 }
+```
+
+`projects` maps a Tickler project to a folder (and optionally a client) for new sessions.
+
+#### `POST /api/bridge-codes` (device)
+
+→ `201 { "code": "K7Q2M9PX", "expires_at": "…", "command": "npx tickler bridge install --server https://… --code K7Q2M9PX" }`.
+Single use, valid 15 minutes. The app shows `command`. A `/setup` pairing code also works.
+
+#### `POST /api/bridge/pair` (no auth; 10 per 10 minutes per IP)
+
+`{ "code": "K7Q2M9PX", "machine": "Mac.lan", "name": "AJ's MacBook Pro" }` →
+`201 { "bridge_id": "…", "token": "tkb_…", "server": { "name", "version", "api" } }`.
+`400 pairing_expired` for an unknown, used or expired code.
+
+#### `POST /api/bridge/heartbeat` (bridge, every 30 s)
+
+```json
+{ "machine": "Mac.lan", "name": "AJ's MacBook Pro", "version": "0.1.0",
+  "runners": [{ "client": "t3_code", "version": "0.1.3" }, { "client": "claude_code", "version": "2.1.308" }],
+  "projects": [{ "project_id": "b28b…", "cwd": "/Users/aj/dev/tickler-app", "client": "t3_code" }] }
+```
+
+→ `200 { "bridge": Bridge }`. Runners other than the five runnable clients are dropped.
+
+#### `GET /api/bridge/next?wait=25` (bridge)
+
+Long poll (at most 25 s). Claims the oldest `queued` dispatch for a client this bridge offers (one
+with `machine` set only goes to that machine) and returns `200 { "dispatch": Dispatch }` with
+`status: "claimed"`, or `204` after `wait` seconds. Also counts as a heartbeat for `online`.
+
+#### `POST /api/dispatches/:id/result` (bridge)
+
+`{ "status": "sent" | "running" | "done" | "failed" | "needs_input", "detail"?: string, "session_id"?: string }`.
+Only the bridge that claimed it. `detail` keeps the last 2,000 characters (the end of the agent's
+reply, or the error). `session_id` on a new session makes the server create the origin (client,
+session id, folder, machine, title from the message's first line, and the `t3-thread://` link for
+T3) and set the dispatch's `origin_id`. `409` once the dispatch is final (`done`, `failed`,
+`needs_input`, `expired`; `sent` may still move on).
+
+#### `GET /api/bridges` (device)
+
+`200 { "bridges": [Bridge] }`
+
+```json
+{ "id": "…", "machine": "Mac.lan", "name": "AJ's MacBook Pro", "version": "0.1.0", "online": true,
+  "last_seen_at": "…", "created_at": "…",
+  "runners": [{ "client": "t3_code", "version": "0.1.3" }],
+  "projects": [{ "project_id": "b28b…", "cwd": "/Users/aj/dev/tickler-app", "client": "t3_code" }] }
+```
+
+`online` while the last heartbeat or poll is under 90 s old. `DELETE /api/bridges/:id` (device)
+removes a bridge and revokes its token; what it had claimed goes back to the queue.
+
+#### `POST /api/dispatches` (device)
+
+```json
+{ "id": "<uuid from the phone>", "project_id": "b28b…", "message": "…",
+  "origin_id": "…",                                                  // resume this session, or
+  "new_session": { "client": "t3_code", "cwd": "/Users/aj/dev/tickler-app" },  // start one
+  "machine": "Mac.lan",                                              // optional; defaults to the origin's machine
+  "entry_id": "…", "checklist_id": "…" }                             // optional, for the history on that page
+```
+
+Exactly one of `origin_id` and `new_session`. The `id` makes it idempotent: the same id returns the
+same dispatch (`200`). → `201 { "dispatch": Dispatch }`. `422 no_runner` when no online bridge
+offers that client (on that machine, if one is known), or the session has no id to resume: the app
+then copies instead. With no machine and exactly one bridge that can run it, that bridge's machine
+is used.
+
+#### `GET /api/dispatches/:id`, `GET /api/dispatches?project_id=&entry_id=&limit=20` (device)
+
+`Dispatch`: `id, project_id, origin_id, client, session_id, cwd, machine, message, entry_id,
+checklist_id, status, detail, created_at, updated_at, expires_at`, newest first. Status goes
+`queued → claimed → sent | running → done | failed | needs_input`, or `queued → expired`.
+
+#### `DELETE /api/dispatches/:id` (device)
+
+Cancels a dispatch that is still `queued`: it is deleted and never runs (`204`). `409` once claimed.
 
 ## MCP
 

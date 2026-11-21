@@ -29,6 +29,10 @@ import { importAll, importSchema } from "../core/import";
 import { connectCommand, createConnectCode } from "../core/connectCli";
 import { decideApproval, pendingApprovals } from "../core/approvals";
 import {
+  bridgeCommand, cancelDispatch, createBridgeCode, createDispatch, dispatchCreateSchema, dispatchJson, getDispatch, heartbeat, heartbeatSchema,
+  listBridges, listDispatches, nextDispatch, pairBridge, reportResult, resultSchema, revokeBridge,
+} from "../core/dispatch";
+import {
   checklistCreateSchema, checklistDetail, checklistJson, checklistPatchSchema, createChecklist, deleteChecklist, getChecklist,
   listChecklists, SCAN_GUIDE, TEMPLATES, updateChecklist,
 } from "../core/checklists";
@@ -76,14 +80,39 @@ api.post("/pair", async (c) => {
   return c.json({ ...r, server: { name: ctx.config.serverName, version: VERSION, api: API_VERSION } });
 });
 
+/** A `tickler bridge` exchanges a one-time code for a bridge token (tkb_). */
+api.post("/bridge/pair", async (c) => {
+  const ctx = c.get("ctx");
+  await rateLimit(ctx, `pair:${clientIp(c)}`, 10, 600);
+  const b = await jsonBody(
+    c,
+    z.object({ code: z.string().min(4).max(20), machine: z.string().trim().min(1).max(200), name: z.string().trim().max(200).nullish() }),
+  );
+  const r = await pairBridge(ctx, b.code, b.machine, b.name ?? null);
+  return c.json({ ...r, server: { name: ctx.config.serverName, version: VERSION, api: API_VERSION } }, 201);
+});
+
 // ---------- auth
 
-/** Device token for everything; MCP tokens only for POST /api/metrics. */
+const BRIDGE_ONLY = /^\/api\/bridge\/(heartbeat|next)$/;
+const BRIDGE_RESULT = /^\/api\/dispatches\/[^/]+\/result$/;
+
+/**
+ * Device token for everything except the bridge routes; MCP tokens only for POST /api/metrics; bridge
+ * tokens only for /api/bridge/* and POST /api/dispatches/:id/result. Agents' tokens (MCP, OAuth) can
+ * never create dispatches, so a prompt injection can't spread from one agent session to another.
+ */
 const requireAuth: MiddlewareHandler<Env> = async (c, next) => {
   const ctx = c.get("ctx");
   const p = await authenticate(ctx, bearer(c.req.header("authorization")));
-  const metricsPush = c.req.method === "POST" && c.req.path.replace(/\/+$/, "") === "/api/metrics";
-  if (!p || (p.actor.type !== "device" && !(metricsPush && p.actor.type === "mcp_token"))) {
+  const path = c.req.path.replace(/\/+$/, "");
+  const metricsPush = c.req.method === "POST" && path === "/api/metrics";
+  const bridgeRoute = BRIDGE_ONLY.test(path) || (c.req.method === "POST" && BRIDGE_RESULT.test(path));
+  const allowed =
+    !!p && (bridgeRoute ? p.actor.type === "bridge" : p.actor.type === "device" || (metricsPush && p.actor.type === "mcp_token"));
+  if (!allowed) {
+    if (p && bridgeRoute) throw new ApiError(403, "forbidden", "Only a paired bridge can use this route");
+    if (p?.actor.type === "bridge") throw new ApiError(403, "forbidden", "A bridge token can only use the bridge routes");
     throw new ApiError(401, "unauthorized", "Missing or invalid token");
   }
   c.set("principal", p);
@@ -123,7 +152,7 @@ const idempotency: MiddlewareHandler<Env> = async (c, next) => {
   );
 };
 
-const isPublic = (c: C) => ["/api/health", "/api/pair"].includes(c.req.path.replace(/\/+$/, ""));
+const isPublic = (c: C) => ["/api/health", "/api/pair", "/api/bridge/pair"].includes(c.req.path.replace(/\/+$/, ""));
 api.use("*", async (c, next) => (isPublic(c) ? next() : requireAuth(c, next)));
 api.use("*", async (c, next) => (isPublic(c) ? next() : idempotency(c, next)));
 
@@ -189,6 +218,58 @@ api.get("/approvals", async (c) => c.json({ approvals: await pendingApprovals(c.
 api.post("/approvals/:id", async (c) => {
   const b = await jsonBody(c, z.object({ decision: z.enum(["allow", "deny"]) }));
   await decideApproval(c.get("ctx"), c.req.param("id"), b.decision === "allow", c.get("principal").actor);
+  return c.body(null, 204);
+});
+
+// ---------- run in agent: bridges and dispatches
+
+/** Setup code for `tickler bridge install`. */
+api.post("/bridge-codes", async (c) => {
+  const r = await createBridgeCode(c.get("ctx"), c.get("principal").actor);
+  return c.json({ ...r, command: bridgeCommand(c.get("baseUrl"), r.code) }, 201);
+});
+
+api.get("/bridges", async (c) => c.json({ bridges: await listBridges(c.get("ctx")) }));
+api.delete("/bridges/:id", async (c) => {
+  await revokeBridge(c.get("ctx"), c.req.param("id"), c.get("principal").actor);
+  return c.body(null, 204);
+});
+
+api.post("/bridge/heartbeat", async (c) => {
+  const b = await jsonBody(c, heartbeatSchema);
+  return c.json({ bridge: await heartbeat(c.get("ctx"), c.get("principal").actor.id!, b) });
+});
+
+/** Long poll: 200 with a claimed dispatch, or 204 after `wait` seconds (at most 25). */
+api.get("/bridge/next", async (c) => {
+  const wait = Number.parseInt(c.req.query("wait") ?? "0", 10);
+  const d = await nextDispatch(c.get("ctx"), c.get("principal").actor.id!, Number.isFinite(wait) ? wait : 0, c.req.raw.signal);
+  return d ? c.json({ dispatch: dispatchJson(d) }) : c.body(null, 204);
+});
+
+api.post("/dispatches/:id/result", async (c) => {
+  const b = await jsonBody(c, resultSchema);
+  return c.json({ dispatch: await reportResult(c.get("ctx"), c.get("principal").actor.id!, c.req.param("id"), b) });
+});
+
+api.post("/dispatches", async (c) => {
+  const p = c.get("principal");
+  const b = await jsonBody(c, dispatchCreateSchema);
+  const r = await createDispatch(c.get("ctx"), p.device!.id, p.actor, b);
+  return c.json({ dispatch: r.dispatch }, r.created ? 201 : 200);
+});
+
+api.get("/dispatches", async (c) => {
+  const limit = intParam(c.req.query("limit"), 20, 100);
+  return c.json({
+    dispatches: await listDispatches(c.get("ctx"), { project_id: c.req.query("project_id"), entry_id: c.req.query("entry_id"), limit }),
+  });
+});
+
+api.get("/dispatches/:id", async (c) => c.json({ dispatch: await getDispatch(c.get("ctx"), c.req.param("id")) }));
+
+api.delete("/dispatches/:id", async (c) => {
+  await cancelDispatch(c.get("ctx"), c.req.param("id"));
   return c.body(null, 204);
 });
 

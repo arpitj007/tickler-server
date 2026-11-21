@@ -6,6 +6,7 @@ import m0001 from "../migrations/0001_init.sql";
 import m0002 from "../migrations/0002_provider_message.sql";
 import m0003 from "../migrations/0003_connect.sql";
 import m0004 from "../migrations/0004_checklists.sql";
+import m0005 from "../migrations/0005_dispatch.sql";
 
 /** Keep in sync with migrations/ (test/migrations.test.ts checks it). */
 export const MIGRATIONS = [
@@ -13,6 +14,7 @@ export const MIGRATIONS = [
   { name: "0002_provider_message.sql", sql: m0002 },
   { name: "0003_connect.sql", sql: m0003 },
   { name: "0004_checklists.sql", sql: m0004 },
+  { name: "0005_dispatch.sql", sql: m0005 },
 ];
 
 export interface WorkerEnv {
