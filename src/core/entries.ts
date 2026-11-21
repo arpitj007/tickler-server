@@ -34,6 +34,14 @@ export const entryFieldsSchema = z.object({
   links: z.array(link).max(20),
   tags: z.array(z.string().trim().min(1).max(50)).max(20),
   source_ref: z.string().trim().max(2000).nullish(),
+  /** Checklist this entry is an item of (same project). */
+  checklist_id: z.string().max(64).nullish(),
+  /** Parent item: makes this a subtask (one level, same checklist). */
+  parent_id: z.string().max(64).nullish(),
+  /** Group heading inside a checklist, e.g. "Security" or "Legal". */
+  section: z.string().trim().max(60).nullish(),
+  /** Order inside its checklist section (ascending). */
+  position: z.number().int().min(0).max(1_000_000),
 });
 export type EntryFields = z.infer<typeof entryFieldsSchema>;
 export type EntryPatch = Partial<EntryFields>;
@@ -59,6 +67,10 @@ export interface EntryRow {
   links: string;
   tags: string;
   source_ref: string | null;
+  checklist_id: string | null;
+  parent_id: string | null;
+  section: string | null;
+  position: number;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -154,6 +166,10 @@ export const DEFAULTS: EntryFields = {
   links: [],
   tags: [],
   source_ref: null,
+  checklist_id: null,
+  parent_id: null,
+  section: null,
+  position: 0,
 };
 
 export function rowToFields(r: EntryRow): EntryFields {
@@ -173,6 +189,10 @@ export function rowToFields(r: EntryRow): EntryFields {
     links: e.links,
     tags: e.tags,
     source_ref: e.source_ref,
+    checklist_id: e.checklist_id,
+    parent_id: e.parent_id,
+    section: e.section,
+    position: e.position,
   };
 }
 
@@ -186,14 +206,15 @@ export interface WriteMeta {
 
 const COLS = [
   "title", "notes", "kind", "start_at", "end_at", "all_day", "timezone", "recurrence", "status",
-  "importance", "external_key", "links", "tags", "source_ref",
+  "importance", "external_key", "links", "tags", "source_ref", "checklist_id", "parent_id", "section", "position",
 ] as const;
 
 function colValues(f: EntryFields) {
   return [
     f.title, f.notes ?? null, f.kind, f.start_at ?? null, f.end_at ?? null, f.all_day ? 1 : 0, f.timezone,
     f.recurrence ?? null, f.status, f.importance, f.external_key ?? null, JSON.stringify(f.links ?? []),
-    JSON.stringify(f.tags ?? []), f.source_ref ?? null,
+    JSON.stringify(f.tags ?? []), f.source_ref ?? null, f.checklist_id ?? null, f.parent_id ?? null, f.section ?? null,
+    f.position ?? 0,
   ];
 }
 
@@ -224,6 +245,7 @@ export async function createEntry(
   const now = ctx.now();
   const f = mergeEntry({ ...DEFAULTS, timezone: input.timezone ?? "UTC" }, input, now);
   const newId = id ?? uuid();
+  await checkPlacement(ctx, projectId, f, newId);
   const nowIso = now.toISOString();
   await ctx.storage.batch([
     BUMP,
@@ -260,7 +282,13 @@ export async function updateEntry(
     if (clash && clash.id !== id) throw new ApiError(409, "conflict", "Another entry in this project has that external_key", { current: entryJson(clash) });
   }
   const now = ctx.now();
+  if (projectId !== cur.project_id && fieldsPatch.checklist_id === undefined) {
+    fieldsPatch.checklist_id = null; // a checklist belongs to one project
+    if (fieldsPatch.parent_id === undefined) fieldsPatch.parent_id = null;
+  }
   const f = mergeEntry(rowToFields(cur), fieldsPatch, now);
+  if (fieldsPatch.checklist_id === null && fieldsPatch.parent_id === undefined) f.parent_id = null;
+  await checkPlacement(ctx, projectId, f, id);
   const completedAt = f.status === "done" ? (cur.status === "done" ? cur.completed_at : now.toISOString()) : null;
   const flagged = meta.originId ? 0 : meta.originFlagged ? 1 : cur.origin_flagged;
   await ctx.storage.batch([
@@ -274,7 +302,61 @@ export async function updateEntry(
   ]);
   const entry = (await getEntry(ctx, id))!;
   await logActivity(ctx, meta.actor, meta.action, `Updated "${entry.title}": ${Object.keys(fieldsPatch).join(", ") || "no fields"}`, meta.originId ?? null);
-  return entry;
+  if (f.status !== cur.status) await cascadeStatus(ctx, entry, meta);
+  return (await getEntry(ctx, id))!;
+}
+
+const isClosed = (s: string) => s === "done" || s === "skipped" || s === "cancelled";
+
+/**
+ * Keep a checklist item and its subtasks in step: finishing an item finishes its open subtasks,
+ * closing the last open subtask finishes the item, and reopening a subtask reopens a done item.
+ */
+async function cascadeStatus(ctx: Ctx, e: EntryRow, meta: WriteMeta) {
+  if (!e.checklist_id || e.deleted_at) return;
+  const sub = { ...meta, action: `${meta.action} (subtask)` };
+  if (!e.parent_id) {
+    if (e.status !== "done") return;
+    const open = await ctx.storage.all<{ id: string }>(
+      "SELECT id FROM entries WHERE parent_id = ? AND deleted_at IS NULL AND status IN ('planned', 'in_progress')",
+      [e.id],
+    );
+    for (const c of open) await updateEntry(ctx, c.id, { status: "done" }, sub);
+    return;
+  }
+  const parent = await getEntry(ctx, e.parent_id);
+  if (!parent || parent.deleted_at) return;
+  if (isClosed(e.status)) {
+    if (isClosed(parent.status)) return;
+    const left = await ctx.storage.first<{ n: number }>(
+      "SELECT COUNT(*) AS n FROM entries WHERE parent_id = ? AND deleted_at IS NULL AND status IN ('planned', 'in_progress')",
+      [parent.id],
+    );
+    if (!left?.n) await updateEntry(ctx, parent.id, { status: "done" }, sub);
+  } else if (parent.status === "done") {
+    await updateEntry(ctx, parent.id, { status: "in_progress" }, sub);
+  } else if (e.status === "in_progress" && parent.status === "planned") {
+    await updateEntry(ctx, parent.id, { status: "in_progress" }, sub);
+  }
+}
+
+/** A checklist item must point at a live checklist of its project; a subtask at a top-level item of the same checklist. */
+async function checkPlacement(ctx: Ctx, projectId: string, f: EntryFields, selfId: string) {
+  if (f.parent_id && !f.checklist_id) invalid({ parent_id: "Only checklist items can have a parent; set checklist_id too." });
+  if (!f.checklist_id) return;
+  const cl = await ctx.storage.first<{ project_id: string; deleted_at: string | null }>(
+    "SELECT project_id, deleted_at FROM checklists WHERE id = ?",
+    [f.checklist_id],
+  );
+  if (!cl || cl.deleted_at) invalid({ checklist_id: "Unknown checklist." });
+  if (cl.project_id !== projectId) invalid({ checklist_id: "That checklist belongs to another project." });
+  if (!f.parent_id) return;
+  if (f.parent_id === selfId) invalid({ parent_id: "An item can't be its own parent." });
+  const parent = await getEntry(ctx, f.parent_id);
+  if (!parent || parent.deleted_at || parent.checklist_id !== f.checklist_id) invalid({ parent_id: "The parent must be an item of the same checklist." });
+  if (parent.parent_id) invalid({ parent_id: "Subtasks can't have subtasks (one level only)." });
+  const kids = await ctx.storage.first("SELECT 1 FROM entries WHERE parent_id = ? AND deleted_at IS NULL LIMIT 1", [selfId]);
+  if (kids) invalid({ parent_id: "This item has subtasks, so it can't become a subtask." });
 }
 
 /**
@@ -323,6 +405,8 @@ export async function deleteEntry(ctx: Ctx, id: string, meta: WriteMeta) {
     },
   ]);
   await logActivity(ctx, meta.actor, meta.action, `Deleted "${cur.title}"`, meta.originId ?? null);
+  const kids = await ctx.storage.all<{ id: string }>("SELECT id FROM entries WHERE parent_id = ? AND deleted_at IS NULL", [id]);
+  for (const k of kids) await deleteEntry(ctx, k.id, meta); // subtasks go with their item
   return (await getEntry(ctx, id))!;
 }
 
@@ -334,6 +418,7 @@ export interface EntryFilter {
   importance?: string | null;
   q?: string | null;
   origin_id?: string | null;
+  checklist_id?: string | null;
   include_deleted?: boolean;
   limit: number;
 }
@@ -363,6 +448,7 @@ export async function listEntries(ctx: Ctx, f: EntryFilter): Promise<EntryRow[]>
     const im = f.importance.split(",").filter(Boolean);
     where.push(`importance IN (${im.map(() => "?").join(",")})`), p.push(...im);
   }
+  if (f.checklist_id) where.push("checklist_id = ?"), p.push(f.checklist_id);
   if (f.origin_id) where.push("(origin_id = ? OR last_origin_id = ?)"), p.push(f.origin_id, f.origin_id);
   if (f.q) {
     where.push("(title LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\' OR external_key = ?)");

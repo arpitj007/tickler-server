@@ -17,7 +17,23 @@ Tool results return JSON text plus `structuredContent`.
 | `create_project` | `name`; optional `color`, `icon` | Creates a project. |
 | `mark_important` | `id` or key, `importance`, `reason`, `origin` | Sets `normal`, `important` or `critical`. |
 | `list_origins` | optional `client`, `project` | The sessions and chats that wrote to Tickler. |
+| `list_checklists` | `project`; optional `checklist` | The project's checklists with progress, items and subtasks. |
+| `create_checklist` | `project`, `kind` (`readiness`, `launch`, `marketing`, `compliance`, `custom`); `name` for custom; optional `description`, `template`, `origin` | Makes a checklist. Built-in kinds come with starter items and exist once per project. |
+| `add_checklist_items` | `project`, `checklist`, `items` (each `title`, `section`, `notes`, `status`, `importance`, `links`, `external_key`, `subtasks`), optional `scanned`, `origin` | Adds or updates up to 100 items. This is how an agent builds a checklist from the product. Items are keyed by `external_key` (derived from section + title if omitted), so a re-scan updates instead of duplicating. |
 | `get_money_summary` | optional `provider`, `month` (`YYYY-MM`) | Month-to-date cost, revenue, forecast and budget status, each with an "as of" time. |
+
+`create_entry` and `update_entry` also take `checklist` (a built-in kind or a custom checklist's name; `null` removes it), `parent` (the `external_key` or id of a checklist item, to make a subtask) and `section`.
+
+## Checklists
+
+Every project (product) can have checklists that say when it's done. Four are built in, each with starter items:
+
+- **Product readiness:** features, quality, security, performance, accessibility, operations.
+- **Launch:** store listings, legal pages, pricing, beta, review, release plan.
+- **Marketing:** positioning, website, content, channels, after launch.
+- **Rules & compliance:** the business rules found in the code and the laws, regulations and store rules that apply, each with a link to its source.
+
+Users add their own (`kind: custom`). Ask your agent "build the readiness checklist for this repo" and it reads the code and calls `add_checklist_items`; items already in place are added as `done`. Entries an agent adds later for the same work carry `checklist`, so the checklist stays the product's north star.
 
 ## Field values
 

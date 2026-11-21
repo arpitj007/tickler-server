@@ -1,3 +1,4 @@
+import { checklistJson, type ChecklistRow } from "./checklists";
 import type { Ctx } from "./context";
 import { entryJson, type EntryRow } from "./entries";
 import { ORIGIN_COLS } from "./origins";
@@ -8,6 +9,7 @@ type Tagged = { t: string; rev: number; row: Record<string, unknown> };
 
 const TABLES: Array<{ key: string; sql: (since: number) => string; params?: (ctx: Ctx) => (string | number)[]; map: (r: any) => unknown }> = [
   { key: "projects", sql: () => "SELECT * FROM projects WHERE rev > ? ORDER BY rev LIMIT ?", map: (r: ProjectRow) => projectJson(r) },
+  { key: "checklists", sql: () => "SELECT * FROM checklists WHERE rev > ? ORDER BY rev LIMIT ?", map: (r: ChecklistRow) => checklistJson(r) },
   { key: "entries", sql: () => "SELECT * FROM entries WHERE rev > ? ORDER BY rev LIMIT ?", map: (r: EntryRow) => entryJson(r) },
   { key: "origins", sql: () => `SELECT ${ORIGIN_COLS} FROM origins WHERE rev > ? ORDER BY rev LIMIT ?`, map: (r) => r },
   { key: "budgets", sql: () => "SELECT * FROM budgets WHERE rev > ? ORDER BY rev LIMIT ?", map: (r: BudgetRow) => budgetJson(r) },

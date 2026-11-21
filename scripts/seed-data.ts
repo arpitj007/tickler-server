@@ -2,6 +2,9 @@
 // with every time written as a "__NOW__±duration" / "__TODAY__±duration" placeholder.
 // See docs/reference/api-contract.md, "Demo data".
 
+import { TEMPLATES } from "../src/core/checklists";
+import { slugify } from "../src/core/util";
+
 type Json = Record<string, unknown>;
 
 function mulberry32(seed: number) {
@@ -199,6 +202,10 @@ export function generateDemo(): Json {
       links: [],
       tags: [],
       source_ref: null,
+      checklist_id: null,
+      parent_id: null,
+      section: null,
+      position: 0,
       completed_at: status === "done" && startMin !== null ? now(Math.min(startMin + int(5, 300), -5)) : null,
       created_at: now(created),
       updated_at: now(Math.min(created + int(1, 600), -1)),
@@ -407,10 +414,59 @@ export function generateDemo(): Json {
     { id: uuid(), name: "Cloudflare Workers Paid", amount: 5, currency: "USD", interval: "monthly", renews_on: today(21 * DAY), project_id: null },
   ].map((f) => ({ ...f, created_at: now(-55 * DAY), updated_at: now(-55 * DAY), rev: nextRev() }));
 
+  // Checklists: Tickler launch has all four built-in ones, Culina AI its readiness checklist.
+  const checklists: Json[] = [];
+  const scanned: Record<string, { section: string; title: string; notes: string; subtasks?: string[] }[]> = {
+    readiness: [
+      { section: "Core features", title: "Offline queue replays edits after reconnect", notes: "Found in ios/Shared/Sync: retries exist, no test for a conflict on replay." },
+      { section: "Core features", title: "Widgets refresh after a sync", notes: "TicklerWidgets reloads timelines on app launch only.", subtasks: ["Reload after background sync", "Reload after completing from a notification"] },
+    ],
+    compliance: [
+      { section: "Business rules", title: "Cloud plan has no free tier and no lifetime option", notes: "From docs/cloud-contract.md: monthly and yearly only." },
+      { section: "Business rules", title: "Entries are never more than 2 years out", notes: "Server rule in src/core/entries.ts (MAX_FUTURE_MS)." },
+    ],
+  };
+  const mkChecklist = (slug: string, kind: keyof typeof TEMPLATES, doneEvery: number, scanAge: number | null) => {
+    const t = TEMPLATES[kind];
+    const id = uuid();
+    const created = -(20 + t.position) * DAY;
+    checklists.push({
+      id, project_id: proj(slug).id, name: t.name, kind, description: t.description, position: t.position, source: "agent",
+      origin_id: claudeApp.id, scanned_at: scanAge === null ? null : now(-scanAge), created_at: now(created), updated_at: now(-DAY),
+      deleted_at: null, rev: nextRev(),
+    });
+    const items = [...t.items, ...(slug === "tickler-launch" ? scanned[kind] ?? [] : [])];
+    let n = 0;
+    items.forEach((it, i) => {
+      const subs = it.subtasks ?? [];
+      const st = (k: number) => (k % doneEvery === 0 ? "done" : k % 7 === 3 ? "in_progress" : "planned");
+      const parentStatus = subs.length ? (subs.every((_, j) => st(n + j + 1) === "done") ? "done" : "in_progress") : st(n);
+      const pid = mkEntry(slug, it.title, "task", null, claudeApp, {
+        status: parentStatus, notes: "notes" in it ? it.notes : null, importance: "importance" in it ? it.importance : "normal",
+        links: "links" in it ? it.links : [], external_key: `cl:${kind}:${slugify(it.section).slice(0, 60)}:${slugify(it.title).slice(0, 60)}`,
+        checklist_id: id, section: it.section, position: i, completed_at: parentStatus === "done" ? now(-int(1, 10) * DAY) : null,
+      });
+      n++;
+      subs.forEach((title, j) => {
+        const s2 = st(n++);
+        mkEntry(slug, title, "task", null, claudeApp, {
+          status: s2, external_key: null, checklist_id: id, parent_id: pid, section: it.section, position: j,
+          completed_at: s2 === "done" ? now(-int(1, 10) * DAY) : null,
+        });
+      });
+    });
+  };
+  mkChecklist("tickler-launch", "readiness", 2, 2 * DAY);
+  mkChecklist("tickler-launch", "launch", 3, null);
+  mkChecklist("tickler-launch", "marketing", 5, null);
+  mkChecklist("tickler-launch", "compliance", 2, 2 * DAY);
+  mkChecklist("culina-ai", "readiness", 4, 6 * DAY);
+
   return {
     cursor: String(rev),
     has_more: false,
     projects,
+    checklists,
     entries,
     origins,
     budgets,

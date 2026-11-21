@@ -89,7 +89,15 @@ approval (10 minutes) and the page waits for the phone, showing the two-digit `m
   "source": "agent|manual|system", "origin_id": "…" | null, "last_origin_id": "…" | null,
   "origin_flagged": false /* true when the writer sent no origin */,
   "external_key": "…" | null, "links": [{ "title", "url" }], "tags": ["…"], "source_ref": "…" | null,
+  "checklist_id": "…" | null /* item of this checklist (same project) */, "parent_id": "…" | null /* subtask of this item */,
+  "section": "Security" | null /* group inside the checklist */, "position": 0 /* order inside its section */,
   "completed_at": "…Z" | null, "created_at", "updated_at", "deleted_at": null, "rev" }
+
+// Checklist: a project's guide to "done". Its items are entries with checklist_id set (undated tasks
+// unless someone gives them a date); subtasks have parent_id (one level). Soft deleted like entries.
+{ "id", "project_id", "name", "kind": "readiness|launch|marketing|compliance|custom" /* one live built-in per kind per project */,
+  "description": "…" | null, "position": 0, "source": "agent|manual|system", "origin_id": "…" | null,
+  "scanned_at": "…Z" | null /* last time an agent read the product to fill it */, "created_at", "updated_at", "deleted_at": null, "rev" }
 
 // Origin
 { "id", "client": "claude_code|claude_code_web|claude_app|cursor|chatgpt|codex|gemini_cli|t3_code|scheduled_task|other",
@@ -141,7 +149,7 @@ approval (10 minutes) and the page waits for the phone, showing the two-digit `m
 ```
 GET /api/changes?since=<cursor>&limit=500
 → { "cursor": "1234", "has_more": false,
-    "projects": [], "entries": [], "origins": [], "budgets": [], "alerts": [],
+    "projects": [], "checklists": [], "entries": [], "origins": [], "budgets": [], "alerts": [],
     "metric_snapshots": [], "sales_events": [], "fixed_costs": [],
     "deleted": [{ "type": "budget|fixed_cost|project", "id": "..." }] }
 ```
@@ -151,6 +159,13 @@ GET /api/changes?since=<cursor>&limit=500
 - Entries are soft deleted (`deleted_at` set), so they arrive as normal rows. Hard-deleted rows
   (budgets, fixed costs) appear in `deleted`.
 - `metric_snapshots` in a full snapshot are limited to the last 400 days.
+
+Checklist rules (server enforced on every entry write): `checklist_id` must be a live checklist of the
+entry's project; `parent_id` needs `checklist_id` and must be a top-level item of the same checklist.
+Moving an entry to another project clears both. Finishing an item (`done`) finishes its open subtasks;
+closing its last open subtask finishes the item; reopening a subtask of a done item sets the item to
+`in_progress`. Deleting an item deletes its subtasks. Progress counts leaves (items without subtasks,
+and subtasks); `cancelled` ones don't count, `done` and `skipped` count as done.
 
 Conflict rule (server enforced on `PATCH /api/entries/:id` and `complete`): last write wins,
 except an entry whose status is `done` is never set back to `planned` or `in_progress` by a write whose
@@ -165,13 +180,19 @@ current entry in `error.current`; the app drops its change and takes the server 
 | POST | `/api/projects` | `{ id?, name, color?, icon?, slug? }` (`id` lets apps create offline; a repeated id returns the existing project) | `Project` |
 | PATCH | `/api/projects/:id` | partial | `Project` |
 | DELETE | `/api/projects/:id` | | archives it, `Project` |
-| GET | `/api/entries` | `?from&to&project_id&status&importance&q&limit≤500` | `{ entries }` (expanded only by date, recurrence not expanded) |
+| GET | `/api/entries` | `?from&to&project_id&checklist_id&status&importance&q&limit≤500` | `{ entries }` (expanded only by date, recurrence not expanded) |
 | GET | `/api/entries/:id` | | `{ entry, origin, last_origin }` |
 | POST | `/api/entries` | `Entry` fields (`id` optional: the app may create ids offline) | `Entry` |
 | PATCH | `/api/entries/:id` | partial + `base_updated_at` | `Entry` |
 | POST | `/api/entries/:id/complete` | `{ status: done|skipped|cancelled|planned|in_progress, note?, base_updated_at? }` | `Entry` |
 | POST | `/api/entries/:id/snooze` | `{ start_at }` | `Entry` |
 | DELETE | `/api/entries/:id` | | soft delete, `Entry` |
+| GET | `/api/checklist-templates` | | `{ templates: [{ kind, name, description, items }], scan_guide }` (`scan_guide`: what an agent should do to fill a checklist; the apps put it in their "build with AI" prompt) |
+| GET | `/api/checklists` | `?project_id` | `{ checklists }` (live ones) |
+| GET | `/api/checklists/:id` | | `Checklist` + `progress: { done, total, complete }` + `items: [{ id, title, status, importance, section, external_key, notes, start_at, subtasks: [...] }]` |
+| POST | `/api/checklists` | `{ id?, project_id, kind, name? /* required for custom */, description?, position?, template? /* default true: add the kind's starter items */ }` | `Checklist`, 201; 200 with the existing one for a repeated id, a built-in kind the project has, or a custom name it has |
+| PATCH | `/api/checklists/:id` | `{ name?, description?, position?, scanned_at? }` | `Checklist` |
+| DELETE | `/api/checklists/:id` | | soft deletes it and its items, `Checklist` |
 | GET | `/api/origins` | `?client&project_id` | `{ origins }` |
 | GET | `/api/origins/:id` | | `{ origin, entries, parent }` |
 | GET | `/api/devices` | | `{ devices }` |
@@ -237,7 +258,7 @@ that code (never expires, never used up). Never set it on a real server.
 
 ## Deep links (apps)
 
-`tickler://entry/<id>`, `tickler://project/<slug>`, `tickler://origin/<id>`,
+`tickler://entry/<id>`, `tickler://project/<slug>`, `tickler://checklist/<id>`, `tickler://origin/<id>`,
 `tickler://money/<provider>`, `tickler://pair?url=…&code=…`, `tickler://approve/<id>`.
 
 ## Demo data

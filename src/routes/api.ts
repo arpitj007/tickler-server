@@ -28,6 +28,10 @@ import { exportAll } from "../core/export";
 import { importAll, importSchema } from "../core/import";
 import { connectCommand, createConnectCode } from "../core/connectCli";
 import { decideApproval, pendingApprovals } from "../core/approvals";
+import {
+  checklistCreateSchema, checklistDetail, checklistJson, checklistPatchSchema, createChecklist, deleteChecklist, getChecklist,
+  listChecklists, SCAN_GUIDE, TEMPLATES, updateChecklist,
+} from "../core/checklists";
 
 export const api = new Hono<Env>();
 
@@ -253,6 +257,7 @@ api.get("/entries", async (c) => {
     status: q.status ?? null,
     importance: q.importance ?? null,
     q: q.q ?? null,
+    checklist_id: q.checklist_id ?? null,
     limit: intParam(q.limit, 500, 500),
   });
   return c.json({ entries: rows.map(entryJson) });
@@ -299,6 +304,42 @@ api.post("/entries/:id/snooze", async (c) => {
 
 api.delete("/entries/:id", async (c) => {
   return c.json(entryJson(await deleteEntry(c.get("ctx"), c.req.param("id"), meta(c, "DELETE /api/entries"))));
+});
+
+// ---------- checklists
+
+api.get("/checklist-templates", (c) =>
+  c.json({
+    templates: Object.entries(TEMPLATES).map(([kind, t]) => ({ kind, name: t.name, description: t.description, items: t.items.length })),
+    scan_guide: SCAN_GUIDE,
+  }),
+);
+
+api.get("/checklists", async (c) => {
+  const rows = await listChecklists(c.get("ctx"), c.req.query("project_id") ?? null);
+  return c.json({ checklists: rows.map(checklistJson) });
+});
+
+api.get("/checklists/:id", async (c) => {
+  const ctx = c.get("ctx");
+  const cl = await getChecklist(ctx, c.req.param("id"));
+  if (!cl || cl.deleted_at) throw new ApiError(404, "not_found", "Checklist not found");
+  return c.json(await checklistDetail(ctx, cl));
+});
+
+api.post("/checklists", async (c) => {
+  const b = await jsonBody(c, checklistCreateSchema);
+  const r = await createChecklist(c.get("ctx"), { ...b, id: b.id?.toLowerCase() }, meta(c, "POST /api/checklists"));
+  return c.json(checklistJson(r.checklist), r.created ? 201 : 200);
+});
+
+api.patch("/checklists/:id", async (c) => {
+  const b = await jsonBody(c, checklistPatchSchema);
+  return c.json(checklistJson(await updateChecklist(c.get("ctx"), c.req.param("id"), b, meta(c, "PATCH /api/checklists"))));
+});
+
+api.delete("/checklists/:id", async (c) => {
+  return c.json(checklistJson(await deleteChecklist(c.get("ctx"), c.req.param("id"), meta(c, "DELETE /api/checklists"))));
 });
 
 // ---------- origins

@@ -16,6 +16,10 @@ import { createProject, findProject, listProjects, projectJson, resolveOrCreateP
 import { rateLimit } from "../core/rateLimit";
 import { ApiError, VERSION } from "../core/util";
 import { getMoneySummary } from "../core/moneyService";
+import {
+  addItems, CHECKLIST_KINDS, checklistDetail, checklistItemSchema, checklistJson, createChecklist, findChecklist, listChecklists,
+  SCAN_GUIDE, updateChecklist, type ChecklistRow,
+} from "../core/checklists";
 
 export const WRITES_PER_MINUTE = 60;
 
@@ -71,7 +75,10 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
         "Tickler is the user's calendar for things AI agents plan for later. Call create_entry whenever you schedule, defer, " +
         "or hand the user something for a future date (follow-ups, deadlines, launches, renewals, scheduled runs). " +
         "Times are UTC ISO 8601. Use a stable external_key so re-runs update instead of duplicating. " +
-        "Always pass origin. Call complete_entry when you finish something that has an entry.",
+        "Always pass origin. Call complete_entry when you finish something that has an entry. " +
+        "Each project (product) can have checklists that define when it's ready: readiness, launch, marketing, compliance " +
+        "(business rules, regulations, legal) and the user's own. When an entry you add belongs to one, pass `checklist`. " +
+        "When asked to build or refresh a checklist, read the product and call add_checklist_items.",
     },
   );
 
@@ -105,6 +112,32 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
 
   const entryOut = (e: EntryRow) => ({ entry: entryJson(e), url: `tickler://entry/${e.id}` });
 
+  async function resolveChecklist(projectId: string, ref: string, meta: WriteMeta): Promise<ChecklistRow> {
+    const found = await findChecklist(ctx, projectId, ref);
+    if (found) return found;
+    const kind = ref.trim().toLowerCase();
+    if ((CHECKLIST_KINDS as readonly string[]).includes(kind) && kind !== "custom") {
+      return (await createChecklist(ctx, { project_id: projectId, kind: kind as ChecklistRow["kind"], template: true }, meta)).checklist;
+    }
+    throw new ApiError(404, "not_found", `No checklist "${ref}" in this project. Built-in: readiness, launch, marketing, compliance; or create_checklist first.`);
+  }
+
+  /** Turn the checklist/parent arguments into checklist_id/parent_id. */
+  async function placement(projectId: string, a: { checklist?: string | null; parent?: string | null; section?: string | null }, meta: WriteMeta) {
+    const out: { checklist_id?: string | null; parent_id?: string | null; section?: string | null } = {};
+    if (a.checklist === null) Object.assign(out, { checklist_id: null, parent_id: null });
+    else if (a.checklist) out.checklist_id = (await resolveChecklist(projectId, a.checklist, meta)).id;
+    if (a.parent === null) out.parent_id = null;
+    else if (a.parent) {
+      const p = (await getEntry(ctx, a.parent)) ?? (await getEntryByKey(ctx, projectId, a.parent));
+      if (!p || p.project_id !== projectId) throw new ApiError(404, "not_found", `No parent item "${a.parent}" in this project`);
+      out.parent_id = p.id;
+      out.checklist_id ??= p.checklist_id;
+    }
+    if (a.section !== undefined) out.section = a.section;
+    return out;
+  }
+
   const fields = {
     title: z.string().max(120).describe("Short title, at most 120 characters, e.g. \"Check App Review status\""),
     start_at: z
@@ -132,6 +165,16 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
       .optional()
       .describe("Stable idempotency key, unique per project, e.g. \"pr-123-merge-followup\". Re-running with the same key updates instead of duplicating."),
     source_ref: z.string().nullable().optional().describe("Where it was decided: commit hash, PR or issue URL, doc URL"),
+    checklist: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Put this entry on one of the project's checklists: readiness, launch, marketing, compliance, or a custom checklist's name. " +
+          "Built-in ones are created if missing. Pass it whenever the work is part of getting the product ready, launched or marketed. null removes it.",
+      ),
+    parent: z.string().nullable().optional().describe("Make it a subtask of this checklist item (its external_key or id)"),
+    section: z.string().max(60).nullable().optional().describe("Group inside the checklist, e.g. Security, Store listing, Legal"),
   };
 
   server.registerTool(
@@ -154,8 +197,9 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
       try {
         const meta = await writeMeta(a.origin, "create_entry");
         const project = await resolveOrCreateProject(ctx, a.project, principal.actor);
-        const { project: _p, origin: _o, ...input } = a;
-        const { entry, created } = await createEntry(ctx, project.id, input, meta);
+        const { project: _p, origin: _o, checklist, parent, section, ...input } = a;
+        const place = await placement(project.id, { checklist, parent, section }, meta);
+        const { entry, created } = await createEntry(ctx, project.id, { ...input, ...place }, meta);
         return ok({ ...entryOut(entry), created, project: projectJson(project) });
       } catch (e) {
         return fail(e);
@@ -182,9 +226,10 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
       try {
         const cur = await findEntry(a);
         const meta = await writeMeta(a.origin, "update_entry");
-        const { id: _i, project: _p, origin: _o, ...patch } = a;
+        const { id: _i, project: _p, origin: _o, checklist, parent, section, ...patch } = a;
         if (a.id === undefined) delete (patch as { external_key?: string }).external_key;
-        return ok(entryOut(await updateEntry(ctx, cur.id, patch, meta)));
+        const place = await placement(cur.project_id, { checklist, parent, section }, meta);
+        return ok(entryOut(await updateEntry(ctx, cur.id, { ...patch, ...place }, meta)));
       } catch (e) {
         return fail(e);
       }
@@ -362,6 +407,112 @@ export function buildMcpServer(ctx: Ctx, meta: McpCallMeta): McpServer {
         let projectId: string | null = null;
         if (a.project) projectId = (await findProject(ctx, a.project))?.id ?? "\u0000";
         return ok({ origins: await listOrigins(ctx, { client: a.client, project_id: projectId, limit: 200 }) });
+      } catch (e) {
+        return fail(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    "list_checklists",
+    {
+      title: "Show a product's checklists",
+      description:
+        "The checklists of a project (product) with progress and every item and subtask: readiness, launch, marketing, " +
+        "compliance (business rules, regulations, legal) and the user's own. Completing a checklist means that part of the product is done. " +
+        "Check it before adding items, and to answer \"is it ready\" or \"what's left before launch\".",
+      inputSchema: {
+        project: z.string().min(1).describe("Project name"),
+        checklist: z.string().optional().describe("Only this one: readiness, launch, marketing, compliance, or a custom checklist's name"),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async (a) => {
+      try {
+        const p = await findProject(ctx, a.project);
+        if (!p) return ok({ checklists: [], note: `No project named "${a.project}"` });
+        let rows = await listChecklists(ctx, p.id);
+        if (a.checklist) {
+          const one = await findChecklist(ctx, p.id, a.checklist);
+          rows = one ? [one] : [];
+        }
+        const checklists = [];
+        for (const c of rows) checklists.push(await checklistDetail(ctx, c));
+        return ok({ project: projectJson(p), checklists, ...(rows.length ? {} : { note: "No checklists yet. add_checklist_items creates the built-in ones." }) });
+      } catch (e) {
+        return fail(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    "create_checklist",
+    {
+      title: "Create a checklist",
+      description:
+        "Create a checklist for a project. kind readiness, launch, marketing or compliance makes the built-in one (one per project) " +
+        "with starter items; kind custom makes the user's own with the name you give. Returns the existing one if it's already there. " +
+        "Usually not needed: add_checklist_items creates built-in checklists on the fly.",
+      inputSchema: {
+        project: z.string().min(1).max(80).describe("Project name. Created if new."),
+        kind: z.enum(CHECKLIST_KINDS).describe("readiness, launch, marketing, compliance, or custom"),
+        name: z.string().max(80).optional().describe("Required for custom"),
+        description: z.string().max(2000).optional().describe("What finishing this checklist means"),
+        template: z.boolean().optional().describe("Add the starter items for a built-in kind (default true)"),
+        origin: originInputSchema.optional().describe(ORIGIN_DESC),
+      },
+      annotations: { idempotentHint: true },
+    },
+    async (a) => {
+      try {
+        const meta = await writeMeta(a.origin, "create_checklist");
+        const project = await resolveOrCreateProject(ctx, a.project, principal.actor);
+        const r = await createChecklist(ctx, { project_id: project.id, kind: a.kind, name: a.name, description: a.description, template: a.template ?? true }, meta);
+        return ok({ checklist: await checklistDetail(ctx, r.checklist), created: r.created, url: `tickler://checklist/${r.checklist.id}` });
+      } catch (e) {
+        return fail(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    "add_checklist_items",
+    {
+      title: "Add items to a product checklist",
+      description:
+        "Add tasks (with subtasks) to a project's checklist; this is how you build or refresh one from the product. " +
+        SCAN_GUIDE +
+        " Built-in checklists (readiness, launch, marketing, compliance) are created with starter items if missing; " +
+        "an item with the same section and title as a starter item updates it. Up to 100 items per call.",
+      inputSchema: {
+        project: z.string().min(1).max(80).describe("Project name. Created if new."),
+        checklist: z.string().min(1).describe("readiness, launch, marketing, compliance, or a custom checklist's name or id"),
+        items: z.array(checklistItemSchema).min(1).max(100).describe(
+          "Each: title, section, notes (what you found, file paths), importance, status (done if already in place), links (sources, " +
+            "e.g. the regulation or guideline), external_key (stable; derived from section + title if omitted), subtasks [{ title, ... }]",
+        ),
+        scanned: z.boolean().optional().describe("true when these items come from reading the product; records the scan time"),
+        origin: originInputSchema.optional().describe(ORIGIN_DESC),
+      },
+      annotations: { destructiveHint: false, idempotentHint: true },
+    },
+    async (a) => {
+      try {
+        const meta = await writeMeta(a.origin, "add_checklist_items");
+        const project = await resolveOrCreateProject(ctx, a.project, principal.actor);
+        let cl = await resolveChecklist(project.id, a.checklist, meta);
+        const added = await addItems(ctx, cl, a.items, meta);
+        if (a.scanned) cl = await updateChecklist(ctx, cl.id, { scanned_at: ctx.now().toISOString() }, meta);
+        const created = added.reduce((n, i) => n + (i.created ? 1 : 0) + i.subtasks.filter((s) => s.created).length, 0);
+        const total = added.reduce((n, i) => n + 1 + i.subtasks.length, 0);
+        const detail = await checklistDetail(ctx, cl);
+        return ok({
+          checklist: { ...checklistJson(cl), progress: detail.progress },
+          created,
+          updated: total - created,
+          items: added.map((i) => ({ id: i.entry.id, external_key: i.entry.external_key, title: i.entry.title, created: i.created, subtasks: i.subtasks.length })),
+          url: `tickler://checklist/${cl.id}`,
+        });
       } catch (e) {
         return fail(e);
       }

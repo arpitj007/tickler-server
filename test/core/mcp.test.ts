@@ -33,7 +33,10 @@ describe("MCP transport and auth", () => {
     const list = await mcp(t, s.mcp, "tools/list");
     const names = list.body.result.tools.map((x: { name: string }) => x.name).sort();
     expect(names).toEqual(
-      ["complete_entry", "create_entry", "create_project", "delete_entry", "get_money_summary", "list_entries", "list_origins", "list_projects", "mark_important", "update_entry"].sort(),
+      [
+        "add_checklist_items", "complete_entry", "create_checklist", "create_entry", "create_project", "delete_entry", "get_money_summary",
+        "list_checklists", "list_entries", "list_origins", "list_projects", "mark_important", "update_entry",
+      ].sort(),
     );
     for (const x of list.body.result.tools) expect(x.description.length).toBeGreaterThan(40);
   });

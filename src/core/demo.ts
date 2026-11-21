@@ -27,6 +27,10 @@ export async function loadDemo(storage: Storage, doc: Doc) {
     const { rev: _r, ...r } = p;
     add("projects", { ...r, archived: bool(r.archived) });
   }
+  for (const c of list("checklists")) {
+    const { rev: _r, ...r } = c;
+    add("checklists", r);
+  }
   for (const o of list("origins")) {
     const { rev: _r, ...r } = o;
     const key = r.session_id ? `${r.client}:s:${r.session_id}` : `${r.client}:demo:${r.id}`;
@@ -58,6 +62,6 @@ export async function loadDemo(storage: Storage, doc: Doc) {
   }
   for (let i = 0; i < stmts.length; i += 200) await storage.batch(stmts.slice(i, i + 200));
   return Object.fromEntries(
-    ["projects", "origins", "entries", "budgets", "alerts", "metric_snapshots", "sales_events", "fixed_costs"].map((k) => [k, list(k).length]),
+    ["projects", "checklists", "origins", "entries", "budgets", "alerts", "metric_snapshots", "sales_events", "fixed_costs"].map((k) => [k, list(k).length]),
   );
 }

@@ -10,6 +10,7 @@ import type { Stmt } from "../storage/types";
 const rows = z.array(z.record(z.string(), z.unknown())).default([]);
 export const importSchema = z.object({
   projects: rows,
+  checklists: rows,
   origins: rows,
   entries: rows,
   budgets: rows,
@@ -31,6 +32,11 @@ const COLS: Record<keyof ImportDoc, Array<[string, (r: R) => unknown]>> = {
     ["name", (r) => str(r.name) ?? "Imported"], ["slug", (r) => str(r.slug)], ["color", (r) => str(r.color) ?? "#5B5BD6"],
     ["icon", (r) => str(r.icon) ?? "folder"], ["archived", (r) => bool(r.archived)],
   ],
+  checklists: [
+    ["project_id", (r) => str(r.project_id)], ["name", (r) => str(r.name) ?? "Checklist"], ["kind", (r) => str(r.kind) ?? "custom"],
+    ["description", (r) => str(r.description)], ["position", (r) => num(r.position) ?? 0], ["source", (r) => str(r.source) ?? "manual"],
+    ["origin_id", (r) => str(r.origin_id)], ["scanned_at", (r) => str(r.scanned_at)], ["deleted_at", (r) => str(r.deleted_at)],
+  ],
   origins: [
     ["origin_key", () => null], ["client", (r) => str(r.client) ?? "other"], ["session_id", (r) => str(r.session_id)],
     ["title", (r) => str(r.title)], ["open_url", (r) => str(r.open_url)], ["resume_command", (r) => str(r.resume_command)],
@@ -45,7 +51,9 @@ const COLS: Record<keyof ImportDoc, Array<[string, (r: R) => unknown]>> = {
     ["status", (r) => str(r.status) ?? "planned"], ["importance", (r) => str(r.importance) ?? "normal"],
     ["source", (r) => str(r.source) ?? "manual"], ["origin_id", (r) => str(r.origin_id)], ["last_origin_id", (r) => str(r.last_origin_id)],
     ["origin_flagged", (r) => bool(r.origin_flagged)], ["external_key", (r) => str(r.external_key)], ["links", (r) => json(r.links, "[]")],
-    ["tags", (r) => json(r.tags, "[]")], ["source_ref", (r) => str(r.source_ref)], ["completed_at", (r) => str(r.completed_at)],
+    ["tags", (r) => json(r.tags, "[]")], ["source_ref", (r) => str(r.source_ref)], ["checklist_id", (r) => str(r.checklist_id)],
+    ["parent_id", (r) => str(r.parent_id)], ["section", (r) => str(r.section)], ["position", (r) => num(r.position) ?? 0],
+    ["completed_at", (r) => str(r.completed_at)],
     ["deleted_at", (r) => str(r.deleted_at)],
   ],
   budgets: [
@@ -74,10 +82,10 @@ const COLS: Record<keyof ImportDoc, Array<[string, (r: R) => unknown]>> = {
 };
 /** Tables that also store created_at / updated_at. */
 const STAMPS: Record<keyof ImportDoc, string[]> = {
-  projects: ["created_at", "updated_at"], origins: [], entries: ["created_at", "updated_at"], budgets: ["created_at", "updated_at"],
+  projects: ["created_at", "updated_at"], checklists: ["created_at", "updated_at"], origins: [], entries: ["created_at", "updated_at"], budgets: ["created_at", "updated_at"],
   alerts: ["created_at"], metric_snapshots: [], sales_events: ["created_at"], fixed_costs: ["created_at", "updated_at"],
 };
-const ORDER: Array<keyof ImportDoc> = ["projects", "origins", "entries", "budgets", "alerts", "metric_snapshots", "sales_events", "fixed_costs"];
+const ORDER: Array<keyof ImportDoc> = ["projects", "checklists", "origins", "entries", "budgets", "alerts", "metric_snapshots", "sales_events", "fixed_costs"];
 
 export async function importAll(ctx: Ctx, doc: ImportDoc, actor: Actor) {
   const now = ctx.now().toISOString();
@@ -99,15 +107,28 @@ export async function importAll(ctx: Ctx, doc: ImportDoc, actor: Actor) {
     if (same) originMap.set(id, same.id);
   }
   const remap = (m: Map<string, string>, v: unknown) => (typeof v === "string" ? m.get(v) ?? v : v);
+  // A built-in checklist (readiness, launch...) that this project already has is merged into it.
+  const checklistMap = new Map<string, string>();
+  for (const c of doc.checklists) {
+    const id = String(c.id ?? "");
+    if (!id || c.deleted_at || str(c.kind) === "custom" || (await ctx.storage.first("SELECT 1 FROM checklists WHERE id = ?", [id]))) continue;
+    const same = await ctx.storage.first<{ id: string }>(
+      "SELECT id FROM checklists WHERE project_id = ? AND kind = ? AND deleted_at IS NULL",
+      [str(remap(projectMap, c.project_id)), str(c.kind)],
+    );
+    if (same) checklistMap.set(id, same.id);
+  }
 
   for (const table of ORDER) {
     const stmts: Stmt[] = [];
     for (const raw of doc[table]) {
       const r: R = { ...raw };
-      if (!r.id || (table === "projects" && projectMap.has(String(r.id))) || (table === "origins" && originMap.has(String(r.id)))) continue;
+      if (!r.id || (table === "projects" && projectMap.has(String(r.id))) || (table === "origins" && originMap.has(String(r.id))) ||
+          (table === "checklists" && checklistMap.has(String(r.id)))) continue;
+      if ("checklist_id" in r) r.checklist_id = remap(checklistMap, r.checklist_id);
       for (const k of ["project_id"]) if (k in r) r[k] = remap(projectMap, r[k]);
       for (const k of ["origin_id", "last_origin_id", "parent_origin_id"]) if (k in r) r[k] = remap(originMap, r[k]);
-      if (table === "entries" && !(await ctx.storage.first("SELECT 1 FROM projects WHERE id = ?", [str(r.project_id)])) &&
+      if ((table === "entries" || table === "checklists") && !(await ctx.storage.first("SELECT 1 FROM projects WHERE id = ?", [str(r.project_id)])) &&
           !doc.projects.some((p) => p.id === r.project_id)) continue; // dangling: its project wasn't exported
       const cols = COLS[table].map(([c]) => c);
       const vals = COLS[table].map(([c, f]) => (table === "origins" && c === "origin_key" ? originKey(r) : f(r)));

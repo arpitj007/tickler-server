@@ -94,7 +94,8 @@ npx wrangler d1 execute DB --remote --command "DELETE FROM admin; DELETE FROM pa
 
 - `/mcp`: MCP server (streamable HTTP, stateless). Tools: `create_entry`, `update_entry`,
   `complete_entry`, `delete_entry`, `list_entries`, `list_projects`, `create_project`,
-  `mark_important`, `list_origins`, `get_money_summary`. Bearer tokens or OAuth 2.1.
+  `mark_important`, `list_origins`, `get_money_summary`, and product checklists: `list_checklists`,
+  `create_checklist`, `add_checklist_items`. Bearer tokens or OAuth 2.1.
 - `/api/*`: JSON API for the apps ([contract](docs/reference/api-contract.md)).
 - `/setup`: admin pages (passphrase or passkey), pairing QR, devices, tokens, money sources.
 - `/oauth/*`, `/.well-known/*`: OAuth 2.1 authorization server (PKCE, dynamic client
