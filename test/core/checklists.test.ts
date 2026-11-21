@@ -114,3 +114,27 @@ describe("checklists over REST", () => {
     expect(wrong.status).toBe(422);
   });
 });
+
+describe("checklist moves", () => {
+  it("subtasks follow their item; a new open subtask reopens a done item", async () => {
+    const t = makeApp();
+    const s = await setupAll(t);
+    const p = await (await t.req("/api/projects", { method: "POST", token: s.device, json: { name: "Shop" } })).json();
+    const mk = async (name: string) => (await (await t.req("/api/checklists", { method: "POST", token: s.device, json: { project_id: p.id, kind: "custom", name } })).json()).id;
+    const a = await mk("A");
+    const b = await mk("B");
+    const item = await (await t.req("/api/entries", { method: "POST", token: s.device, json: { project_id: p.id, title: "i", checklist_id: a } })).json();
+    const sub = await (await t.req("/api/entries", { method: "POST", token: s.device, json: { project_id: p.id, title: "s", checklist_id: a, parent_id: item.id } })).json();
+    await t.req(`/api/entries/${item.id}`, { method: "PATCH", token: s.device, json: { checklist_id: b } });
+    let child = await (await t.req(`/api/entries/${sub.id}`, { token: s.device })).json();
+    expect(child.entry.checklist_id).toBe(b);
+    expect(child.entry.parent_id).toBe(item.id);
+    await t.req(`/api/entries/${item.id}/complete`, { method: "POST", token: s.device, json: { status: "done" } });
+    await t.req("/api/entries", { method: "POST", token: s.device, json: { project_id: p.id, title: "s2", checklist_id: b, parent_id: item.id } });
+    expect((await (await t.req(`/api/entries/${item.id}`, { token: s.device })).json()).entry.status).toBe("in_progress");
+    await t.req(`/api/entries/${item.id}`, { method: "PATCH", token: s.device, json: { checklist_id: null } });
+    child = await (await t.req(`/api/entries/${sub.id}`, { token: s.device })).json();
+    expect(child.entry.checklist_id).toBeNull();
+    expect(child.entry.parent_id).toBeNull();
+  });
+});

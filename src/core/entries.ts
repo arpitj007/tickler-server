@@ -261,6 +261,7 @@ export async function createEntry(
   ]);
   const entry = (await getEntry(ctx, newId))!;
   await logActivity(ctx, meta.actor, meta.action, `Created "${entry.title}"${f.start_at ? ` at ${f.start_at}` : ""}`, meta.originId ?? null);
+  if (entry.parent_id) await cascadeStatus(ctx, entry, meta); // an open subtask reopens a done item
   return { entry, created: true };
 }
 
@@ -303,6 +304,13 @@ export async function updateEntry(
   const entry = (await getEntry(ctx, id))!;
   await logActivity(ctx, meta.actor, meta.action, `Updated "${entry.title}": ${Object.keys(fieldsPatch).join(", ") || "no fields"}`, meta.originId ?? null);
   if (f.status !== cur.status) await cascadeStatus(ctx, entry, meta);
+  if (f.checklist_id !== cur.checklist_id && !cur.parent_id) {
+    // Subtasks follow their item to another checklist, or become plain entries when it leaves one.
+    const kids = await ctx.storage.all<{ id: string }>("SELECT id FROM entries WHERE parent_id = ? AND deleted_at IS NULL", [id]);
+    for (const k of kids) {
+      await updateEntry(ctx, k.id, { project_id: projectId, checklist_id: f.checklist_id ?? null, parent_id: f.checklist_id ? id : null }, meta);
+    }
+  }
   return (await getEntry(ctx, id))!;
 }
 
