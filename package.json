@@ -23,19 +23,19 @@
     "test:cloud": "vitest run --config vitest.cloud.config.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^2.1.6",
+    "@hono/node-server": "^2.1.9",
     "@modelcontextprotocol/sdk": "^1.32.2",
-    "@simplewebauthn/server": "^14.0.3",
-    "better-sqlite3": "^13.0.3",
-    "hono": "^4.13.16",
-    "jose": "^6.2.15",
+    "@simplewebauthn/server": "^14.1.0",
+    "better-sqlite3": "^13.2.0",
+    "hono": "^4.13.19",
+    "jose": "^6.2.17",
     "node-cron": "^4.6.0",
     "uqr": "^0.1.3",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.23.0",
-    "@cloudflare/workers-types": "^5.20261104.1",
+    "@cloudflare/workers-types": "^5.20261118.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.6",
     "@types/node-cron": "^3.0.11",
@@ -43,7 +43,7 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^4.1.12",
-    "wrangler": "^4.158.0"
+    "wrangler": "^4.164.0"
   },
   "cloudflare": {
     "bindings": {
