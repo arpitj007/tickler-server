@@ -80,7 +80,7 @@ To let Apple and Google review the apps, we run a demo Tickler server that conta
 ## App Store and Google Play privacy labels
 
 - **Self-hosted use collects nothing.** Data the app sends goes to the server you set up, which you control, not to us.
-- **Tickler Cloud** (once it is available in the app): the App Store label lists, as linked to you and used only for app functionality, never for tracking: Contact Info (email address), User Content (your entries and other content), Identifiers (user id) and Purchases (purchase history).
+- **Tickler Cloud** (once it is available in the app): the App Store label lists, as linked to you and used only for app functionality, never for tracking: Contact Info (email address), User Content (your entries and other content), Financial Info (the revenue and cost numbers from money sources you connect), Identifiers (user id) and Purchases (purchase history).
 - **Google Play Data safety:** No data collected, no data shared, until Tickler Cloud is offered on Android.
 
 ## Future optional push relay (not active)

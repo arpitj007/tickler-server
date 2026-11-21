@@ -23,11 +23,11 @@
     "APPLE_BUNDLE_ID": "com.gettickler.tickler",
     "CLOUD_ACCEPT_SANDBOX": "false"
   },
-  // Turn on once tickler.cloud is a zone in this account (wildcard DNS record "*" proxied).
-  // "routes": [
-  //   { "pattern": "tickler.cloud/*", "zone_name": "tickler.cloud" },
-  //   { "pattern": "*.tickler.cloud/*", "zone_name": "tickler.cloud" }
-  // ],
+  // Needs proxied DNS records for the apex and "*" (any target, e.g. AAAA 100::) in the tickler.cloud zone.
+  "routes": [
+    { "pattern": "tickler.cloud/*", "zone_name": "tickler.cloud" },
+    { "pattern": "*.tickler.cloud/*", "zone_name": "tickler.cloud" }
+  ],
   "workers_dev": false,
   "env": {
     "staging": {
