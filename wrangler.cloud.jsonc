@@ -33,6 +33,7 @@
     "staging": {
       "name": "tickler-cloud-staging",
       "workers_dev": true,
+      "routes": [],
       "durable_objects": { "bindings": [{ "name": "SERVERS", "class_name": "TicklerServer" }] },
       "d1_databases": [{ "binding": "CLOUD_DB", "database_name": "tickler-cloud-staging", "migrations_dir": "migrations-cloud" }],
       "triggers": { "crons": ["30 5 * * *"] },
